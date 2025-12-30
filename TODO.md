@@ -77,6 +77,10 @@
   - **位置**: `views/StatsView.tsx`
   - **现象**: ~~按钮点击后没有清空统计数据~~ **已修复**
   - **解决**: 添加 `handleReset` 函数，调用 `clearStats()` 后触发 `onReset()`
+- [x] 🟡 中：Performance 统计显示问题 - 答错后仍显示 N/A 而非 0%
+  - **位置**: `views/StatsView.tsx`
+  - **现象**: ~~第一次答错时，Performance 显示为 N/A 而非 0%~~ **已修复**
+  - **解决**: 改进 `calcAccuracy()` 函数，区分"无数据"(-1) 和 "0%准确度"(0)
 - [ ] 🟡 中：Dealer A 时 Surrender 逻辑不准确
 - [ ] 🟢 低：统计页面的百分比显示精度问题
 

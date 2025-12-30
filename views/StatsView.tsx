@@ -7,6 +7,7 @@ interface StatsViewProps {
 }
 
 const StatsView: React.FC<StatsViewProps> = ({ stats, onReset }) => {
+  // 返回 {correct, total, accuracy}，total为0表示无数据
   const calcAccuracy = (cat: 'hard'|'soft'|'pairs') => {
     let correct = 0;
     let total = 0;
@@ -14,11 +15,13 @@ const StatsView: React.FC<StatsViewProps> = ({ stats, onReset }) => {
       correct += e.correct;
       total += e.total;
     });
-    return total === 0 ? 0 : Math.round((correct / total) * 100);
+    const accuracy = total === 0 ? -1 : Math.round((correct / total) * 100);
+    return { correct, total, accuracy };
   };
 
   const getColorByPercent = (percent: number): string => {
-    if (percent === 0) return 'text-gray-400';
+    if (percent === -1) return 'text-gray-400'; // 无数据
+    if (percent === 0) return 'text-red-400'; // 0% 准确度（做错了）
     if (percent >= 90) return 'text-green-400';
     if (percent >= 70) return 'text-yellow-400';
     return 'text-red-400';
@@ -31,7 +34,7 @@ const StatsView: React.FC<StatsViewProps> = ({ stats, onReset }) => {
   };
 
   const formatAccuracy = (percent: number): string => {
-    return percent === 0 ? 'N/A' : `${percent}%`;
+    return percent === -1 ? 'N/A' : `${percent}%`;
   };
 
   const handleReset = () => {
@@ -52,20 +55,20 @@ const StatsView: React.FC<StatsViewProps> = ({ stats, onReset }) => {
         <div className="grid grid-cols-3 gap-6">
           <div>
             <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Hard</div>
-            <div className={`text-3xl font-mono font-bold ${getColorByPercent(hardAccuracy)}`}>
-              {formatAccuracy(hardAccuracy)}
+            <div className={`text-3xl font-mono font-bold ${getColorByPercent(hardAccuracy.accuracy)}`}>
+              {formatAccuracy(hardAccuracy.accuracy)}
             </div>
           </div>
           <div>
             <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Soft</div>
-            <div className={`text-3xl font-mono font-bold ${getColorByPercent(softAccuracy)}`}>
-              {formatAccuracy(softAccuracy)}
+            <div className={`text-3xl font-mono font-bold ${getColorByPercent(softAccuracy.accuracy)}`}>
+              {formatAccuracy(softAccuracy.accuracy)}
             </div>
           </div>
           <div>
             <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Pairs</div>
-            <div className={`text-3xl font-mono font-bold ${getColorByPercent(pairsAccuracy)}`}>
-              {formatAccuracy(pairsAccuracy)}
+            <div className={`text-3xl font-mono font-bold ${getColorByPercent(pairsAccuracy.accuracy)}`}>
+              {formatAccuracy(pairsAccuracy.accuracy)}
             </div>
           </div>
         </div>
