@@ -79,6 +79,7 @@ const RulesView: React.FC<RulesViewProps> = ({ rules, setRules }) => {
       
       {/* Table Rules */}
       <div className="bg-gray-800 p-6 rounded-lg space-y-4 shadow-lg border border-gray-700">
+        <h3 className="text-lg font-bold mb-4">Table Rules</h3>
         <RuleItemWithInfo
           label="Dealer Hits Soft 17"
           description="When dealer shows A+6, whether dealer must hit (H17) or stand (S17)"
@@ -176,9 +177,9 @@ More decks mean the house has a greater advantage. The basic strategy may need s
       </div>
 
       {/* Simulation Rules */}
-      <div className={`p-0 rounded-lg shadow-lg border ${simLocked ? 'border-amber-500 bg-amber-900/10' : 'border-gray-700 bg-gray-800'}`}>
-        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-700">
-          <div className="text-sm font-semibold text-gray-200">Simulation Rules</div>
+      <div className={`bg-gray-800 rounded-lg shadow-lg border p-6 space-y-4 ${simLocked ? 'border-amber-500 bg-amber-900/10 opacity-80' : 'border-gray-700'}`}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">Simulation Rules</h3>
           {simLocked && (
             <div className="flex items-center gap-2 text-xs text-amber-900 bg-amber-300 px-2 py-1 rounded font-semibold">
               <span role="img" aria-label="lock">🔒</span>
@@ -186,8 +187,7 @@ More decks mean the house has a greater advantage. The basic strategy may need s
             </div>
           )}
         </div>
-        <div className={`space-y-4 p-6 ${simLocked ? 'opacity-80' : ''}`}>
-          <RuleItemWithInfo
+        <RuleItemWithInfo
             label="Blackjack Payout"
             description="Payout when you hit a natural blackjack. 3:2 is player-favorable; 6:5 increases house edge."
             onInfoClick={() => showExplanation(
@@ -230,7 +230,6 @@ More decks mean the house has a greater advantage. The basic strategy may need s
               ))}
             </select>
           </RuleItemWithInfo>
-        </div>
       </div>
 
       <button

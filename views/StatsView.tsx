@@ -84,7 +84,7 @@ const StatsView: React.FC<StatsViewProps> = ({ stats, onReset }) => {
         <p className="text-gray-400 text-sm md:text-base"></p>
       </div>
       
-      <div className="bg-gray-800 p-6 rounded-lg">
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
         <h3 className="text-lg font-bold mb-4">Practice Performance</h3>
         <div className="grid grid-cols-3 gap-6">
           <div>
@@ -108,7 +108,7 @@ const StatsView: React.FC<StatsViewProps> = ({ stats, onReset }) => {
         </div>
       </div>
 
-      <div className="bg-gray-800 p-6 rounded-lg">
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
         <h3 className="text-lg font-bold mb-4">Practice Streaks</h3>
         <div className="grid grid-cols-2 gap-6">
           <div>
@@ -138,19 +138,13 @@ const StatsView: React.FC<StatsViewProps> = ({ stats, onReset }) => {
         )}
       </div>
 
-      <div className="bg-gray-800 p-6 rounded-lg">
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
         <h3 className="text-lg font-bold mb-4">Simulation</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 gap-6">
           <div>
             <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Max Multiplier</div>
             <div className={`text-3xl font-mono font-bold ${getColorByMultiplier(stats.simMaxMultiplier)}`}>
               {renderSimMax()}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Max Drawdown</div>
-            <div className={`text-3xl font-mono font-bold ${getColorByDrawdown(stats.simMaxDrawdown)}`}>
-              {renderSimDrawdown()}
             </div>
           </div>
           <div>
