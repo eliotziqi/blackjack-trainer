@@ -120,9 +120,13 @@ const ScenarioView: React.FC<ScenarioViewProps> = ({ globalRules, navigate }) =>
         {/* <p className="text-gray-400 text-sm md:text-base"></p> */}
       </div>
       
-      <div className="flex gap-12 md:gap-16 w-full px-8 py-6 space-y-6">
+      {/* Dealer & Player 左右分布区域 */}
+      <div className="w-full flex gap-12 md:gap-16 px-8 py-6">
+        {/* Dealer 区域 - 左侧 */}
         <div className="flex-1 text-center">
+          {/* Title Row - 统一高度确保对齐 */}
           <h3 className="text-gray-400 text-sm tracking-widest uppercase mb-4 h-6 flex items-center justify-center">Dealer Upcard ({scenario.dVal === 11 ? 'A' : scenario.dVal})</h3>
+          {/* Card Stage - 顶部对齐 */}
           <div className="flex justify-center">
             <Card card={{
               rank: (scenario.dVal === 11 ? 'A' : scenario.dVal).toString() as Rank, 
@@ -131,8 +135,12 @@ const ScenarioView: React.FC<ScenarioViewProps> = ({ globalRules, navigate }) =>
             }} />
           </div>
         </div>
+
+        {/* Player 区域 - 右侧 */}
         <div className="flex-1 text-center">
+          {/* Title Row - 统一高度确保对齐 */}
           <h3 className="text-gray-400 text-sm tracking-widest uppercase mb-4 h-6 flex items-center justify-center">Your Hand ({formatHandValue(displayHand.cards)})</h3>
+          {/* Card Stage - 顶部对齐 */}
           <div className="flex justify-center -space-x-12">
             {displayHand.cards.map((c, i) => <Card key={i} card={c} />)}
           </div>
