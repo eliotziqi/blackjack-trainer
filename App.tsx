@@ -338,6 +338,10 @@ const PracticeView = ({ globalRules, stats }: { globalRules: GameRules, stats: a
   const [playerHand, setPlayerHand] = useState<Hand>(createHand());
   const [dealerUpCard, setDealerUpCard] = useState<CardType>({ rank: Rank.Two, suit: Suit.Clubs, value: 2 });
   const [feedback, setFeedback] = useState<{ correct: boolean, message: string, optimal: Action } | null>(null);
+  
+  // 🔒 交互锁：防止动画期间重复点击
+  const [animationStage, setAnimationStage] = useState<'idle' | 'busy'>('idle');
+  const isBusy = animationStage !== 'idle';
 
   const dealNewHand = () => {
     let d = deck;
@@ -356,6 +360,7 @@ const PracticeView = ({ globalRules, stats }: { globalRules: GameRules, stats: a
         cards: [p1, p2],
     });
     setFeedback(null);
+    setAnimationStage('idle'); // 🔓 解锁
   };
 
   useEffect(() => {
@@ -363,6 +368,12 @@ const PracticeView = ({ globalRules, stats }: { globalRules: GameRules, stats: a
   }, []);
 
   const handleAction = (action: Action) => {
+    // 🚪 防止重复触发
+    if (isBusy) return;
+    
+    // 🔒 上锁
+    setAnimationStage('busy');
+    
     const optimal = getBasicStrategyAction(playerHand, dealerUpCard, rules);
     const isCorrect = action === optimal;
     
@@ -410,7 +421,7 @@ const PracticeView = ({ globalRules, stats }: { globalRules: GameRules, stats: a
          <ActionControls 
             onAction={handleAction} 
             allowedActions={[Action.Hit, Action.Stand, Action.Double, Action.Split, Action.Surrender]}
-            disabled={!!feedback}
+            disabled={isBusy}
          />
       </div>
     </div>

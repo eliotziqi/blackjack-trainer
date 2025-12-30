@@ -20,7 +20,7 @@ const ActionControls: React.FC<ActionControlsProps> = ({ onAction, allowedAction
   };
 
   return (
-    <div className="flex flex-wrap gap-2 justify-center w-full max-w-md mx-auto p-4">
+    <div className={`flex flex-wrap gap-2 justify-center w-full max-w-md mx-auto p-4 ${disabled ? 'pointer-events-none' : ''}`}>
       {Object.values(Action).map((action) => {
         const isAllowed = allowedActions.includes(action);
         if (!isAllowed) return null; // Or render disabled state based on preference
