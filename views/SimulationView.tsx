@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GameRules, Action, Hand, Card as CardType, SimState, Rank } from '../types';
 import { createDeck, shuffleDeck, createHand, calculateHandValue, playDealerTurn } from '../services/blackjackLogic';
-import { updateSimMaxMultiplier } from '../services/statsService';
+import { recordSimRoundStats, resetSimCurrentWinStreak, updateSimMaxMultiplier } from '../services/statsService';
 import { getBasicStrategyAction } from '../services/strategyEngine';
 import Card from '../components/Card';
 import ActionControls from '../components/ActionControls';
@@ -11,6 +11,19 @@ interface SimulationViewProps {
 }
 
 const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
+  const ALL_IN_THRESHOLD = 100; // 触发 All-In 成就的下注下限
+  const roundFlagsRef = useRef({ hadBlackjack: false, didAllIn: false, splitUsed: false, das: false });
+  const pendingSimStatsRef = useRef<{ delta: number; drawdown: number; achievements: string[] } | null>(null);
+  const sessionAchievementsRef = useRef<Set<string>>(new Set());
+  const [roundsPlayed, setRoundsPlayed] = useState(0);
+  const [leaveSummary, setLeaveSummary] = useState<{
+    delta: number;
+    multiplier: number;
+    achievements: number;
+    usedHints: boolean;
+    hasPlayed: boolean;
+    rounds: number;
+  } | null>(null);
   // Snapshot Rules
   const rules = useRef(globalRules).current;
   
@@ -56,6 +69,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
       if (parsed.hasUsedHints !== undefined) setHasUsedHints(parsed.hasUsedHints);
       if (parsed.roundStartBankroll !== undefined) setRoundStartBankroll(parsed.roundStartBankroll);
       if (parsed.roundResult) setRoundResult(parsed.roundResult);
+      if (parsed.roundsPlayed !== undefined) setRoundsPlayed(parsed.roundsPlayed);
     } catch (e) {
       // ignore bad data
     }
@@ -77,9 +91,10 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
       hasUsedHints,
       roundStartBankroll,
       roundResult,
+      roundsPlayed,
     };
     localStorage.setItem(SIM_STATE_KEY, JSON.stringify(payload));
-  }, [bankroll, initialBankroll, peakBankroll, currentBet, deck, playerHands, activeHandIndex, dealerHand, gameState, hintsEnabled, hasUsedHints, roundStartBankroll, roundResult]);
+  }, [bankroll, initialBankroll, peakBankroll, currentBet, deck, playerHands, activeHandIndex, dealerHand, gameState, hintsEnabled, hasUsedHints, roundStartBankroll, roundResult, roundsPlayed]);
 
   // 更新峰值
   useEffect(() => {
@@ -114,6 +129,9 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
 
   const placeBet = () => {
     if (bankroll < currentBet) return;
+    const preBetBankroll = bankroll;
+    const allIn = preBetBankroll > 0 && currentBet >= preBetBankroll && preBetBankroll >= ALL_IN_THRESHOLD;
+    roundFlagsRef.current = { hadBlackjack: false, didAllIn: allIn, splitUsed: false, das: false };
     setRoundStartBankroll(bankroll);
     setRoundResult(null);
     setBankroll(prev => prev - currentBet);
@@ -162,35 +180,37 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
     const currentHand = playerHands[activeHandIndex];
     let d = [...deck];
     let nextHand = false;
+    const updatedHands = [...playerHands];
+    let newHand = { ...currentHand };
 
     if (action === Action.Hit) {
       const card = d.pop()!;
-      const newHand = {...currentHand, cards: [...currentHand.cards, card]};
+      newHand = { ...currentHand, cards: [...currentHand.cards, card] };
       if (calculateHandValue(newHand.cards) > 21) {
         newHand.isBusted = true;
         newHand.isCompleted = true;
         nextHand = true;
       }
-      updateHand(activeHandIndex, newHand);
     } else if (action === Action.Stand) {
-      const newHand = {...currentHand, isCompleted: true};
-      updateHand(activeHandIndex, newHand);
+      newHand = { ...currentHand, isCompleted: true };
       nextHand = true;
     } else if (action === Action.Double) {
       if (bankroll < currentHand.bet) return;
       setBankroll(b => b - currentHand.bet);
       const card = d.pop()!;
-      const newHand = {...currentHand, cards: [...currentHand.cards, card], bet: currentHand.bet * 2, isCompleted: true, hasDoubled: true};
+      newHand = { ...currentHand, cards: [...currentHand.cards, card], bet: currentHand.bet * 2, isCompleted: true, hasDoubled: true };
       if (calculateHandValue(newHand.cards) > 21) newHand.isBusted = true;
-      updateHand(activeHandIndex, newHand);
+      if (roundFlagsRef.current.splitUsed) {
+        roundFlagsRef.current.das = true;
+      }
       nextHand = true;
     } else if (action === Action.Surrender) {
-      const newHand = {...currentHand, isCompleted: true, hasSurrendered: true};
-      updateHand(activeHandIndex, newHand);
+      newHand = { ...currentHand, isCompleted: true, hasSurrendered: true };
       nextHand = true;
     } else if (action === Action.Split) {
       if (bankroll < currentHand.bet) return;
       setBankroll(b => b - currentHand.bet);
+      roundFlagsRef.current.splitUsed = true;
       
       const card1 = currentHand.cards[0];
       const card2 = currentHand.cards[1];
@@ -201,18 +221,30 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
       const hand2 = createHand(currentHand.bet);
       hand2.cards = [card2, d.pop()!];
       
-      const newHands = [...playerHands];
-      newHands.splice(activeHandIndex, 1, hand1, hand2);
-      setPlayerHands(newHands);
+      updatedHands.splice(activeHandIndex, 1, hand1, hand2);
+      setPlayerHands(updatedHands);
       
       setDeck(d);
       return;
     }
 
+    updatedHands[activeHandIndex] = newHand;
+    setPlayerHands(updatedHands);
     setDeck(d);
 
     if (nextHand) {
-      if (activeHandIndex < playerHands.length - 1) {
+      const allHandsDone = updatedHands.every(h => h.isCompleted);
+      const onlySurrenderOrBust = allHandsDone && updatedHands.every(h => h.hasSurrendered || h.isBusted);
+
+      if (onlySurrenderOrBust) {
+        // 如果所有手牌都是投降或爆牌，直接结算，跳过庄家补牌
+        const revealedDealer = { ...dealerHand, cards: dealerHand.cards.map((c, idx) => idx === 1 ? { ...c, isHidden: false } : c) };
+        setDealerHand(revealedDealer);
+        resolveRound(revealedDealer, updatedHands);
+        return;
+      }
+
+      if (activeHandIndex < updatedHands.length - 1) {
         setActiveHandIndex(i => i + 1);
       } else {
         setGameState(SimState.DealerTurn);
@@ -236,11 +268,12 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
     }, 500);
   };
 
-  const resolveRound = (finalDealerHand?: Hand) => {
+  const resolveRound = (finalDealerHand?: Hand, handsOverride?: Hand[]) => {
     setGameState(SimState.Resolving);
     
     // 使用传入的finalDealerHand，如果没有则用状态中的（用于instant blackjack情况）
     const dHand = finalDealerHand || dealerHand;
+    const hands = handsOverride || playerHands;
     
     let payout = 0;
     const dVal = calculateHandValue(dHand.cards);
@@ -249,11 +282,14 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
 
     console.log('=== Round Resolution ===');
     console.log('Dealer:', dVal, 'Busted:', dBusted, 'Blackjack:', dHasBJ);
-    console.log('Player hands:', playerHands.length);
+    console.log('Player hands:', hands.length);
 
-    playerHands.forEach((h, idx) => {
+    hands.forEach((h, idx) => {
       const pVal = calculateHandValue(h.cards);
       const pHasBJ = pVal === 21 && h.cards.length === 2 && !h.canSplit;
+      if (pHasBJ) {
+        roundFlagsRef.current.hadBlackjack = true;
+      }
       
       console.log(`Hand ${idx + 1}: Value=${pVal}, Bet=${h.bet}, Busted=${h.isBusted}, BJ=${pHasBJ}, Surrendered=${h.hasSurrendered}`);
       
@@ -313,9 +349,19 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
     setBankroll(b => {
       const newBank = b + payout;
       const start = roundStartBankroll ?? (initialBankroll ?? b);
-      setRoundResult({ delta: newBank - start, total: newBank });
+      const delta = newBank - start;
+      const peak = peakBankroll ?? newBank;
+      const drawdown = peak > 0 ? Math.max(0, (peak - newBank) / peak) : 0;
+      const achievements: string[] = [];
+      if (roundFlagsRef.current.hadBlackjack) achievements.push('Blackjack');
+      if (roundFlagsRef.current.didAllIn) achievements.push(`All-In (>=${ALL_IN_THRESHOLD})`);
+      if (roundFlagsRef.current.das) achievements.push('DAS');
+      achievements.forEach(a => sessionAchievementsRef.current.add(a));
+      pendingSimStatsRef.current = { delta, drawdown, achievements };
+      setRoundResult({ delta, total: newBank });
       return newBank;
     });
+    setRoundsPlayed(c => c + 1);
     
     setTimeout(() => {
       setPlayerHands([]);
@@ -324,46 +370,83 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
     }, 2500);
   };
 
-    const handleLeaveTable = () => {
-      const base = initialBankroll ?? bankroll;
-      if (base > 0) {
-        const totalValue = bankroll;
-        const multiplier = totalValue / base;
-        updateSimMaxMultiplier(multiplier);
-      }
+  const handleLeaveTable = () => {
+    const base = initialBankroll ?? bankroll;
+    const hasPlayed = roundsPlayed > 0;
+    const totalValue = bankroll;
+    const multiplier = base > 0 ? totalValue / base : 1;
+    const delta = totalValue - base;
+    const achievementsCount = hasUsedHints ? 0 : sessionAchievementsRef.current.size;
 
-      // 重置到 Setup，但保留当前bankroll作为默认值
-      setGameState(SimState.Setup);
-      setDeck([]);
-      setPlayerHands([]);
-      setDealerHand(createHand());
-      setActiveHandIndex(0);
-      setRoundStartBankroll(null);
-      setRoundResult(null);
-      setHintAction(null);
-      setHasUsedHints(false);
-      setHintsEnabled(false);
-      setInitialBankroll(null);
-      setPeakBankroll(null);
-      // 清理本地存档
-      localStorage.removeItem(SIM_STATE_KEY);
-    };
+    setLeaveSummary({
+      delta,
+      rounds: roundsPlayed,
+      multiplier,
+      achievements: achievementsCount,
+      usedHints: hasUsedHints,
+      hasPlayed,
+    });
+
+    // 仅在有对局且未使用提示时更新统计，避免 Start Table 立刻 Leave 的误统计
+    if (hasPlayed && base > 0 && !hasUsedHints) {
+      updateSimMaxMultiplier(multiplier);
+    }
+
+    resetSimCurrentWinStreak();
+    pendingSimStatsRef.current = null;
+    roundFlagsRef.current = { hadBlackjack: false, didAllIn: false, splitUsed: false, das: false };
+    sessionAchievementsRef.current.clear();
+
+    // 重置到 Setup，但保留当前bankroll作为默认值
+    setGameState(SimState.Setup);
+    setDeck([]);
+    setPlayerHands([]);
+    setDealerHand(createHand());
+    setActiveHandIndex(0);
+    setRoundStartBankroll(null);
+    setRoundResult(null);
+    setHintAction(null);
+    setHasUsedHints(false);
+    setHintsEnabled(false);
+    setInitialBankroll(null);
+    setPeakBankroll(null);
+    setRoundsPlayed(0);
+    // 清理本地存档
+    localStorage.removeItem(SIM_STATE_KEY);
+  };
 
   // Hint Logic
   useEffect(() => {
     if (gameState === SimState.PlayerTurn && hintsEnabled) {
       const currentHand = playerHands[activeHandIndex];
-      const action = getBasicStrategyAction(currentHand, dealerHand.cards[0], rules);
+      const dealerUp = dealerHand.cards[0];
+      if (!currentHand || !dealerUp) {
+        setHintAction(null);
+        return;
+      }
+      const action = getBasicStrategyAction(currentHand, dealerUp, rules);
       setHintAction(action);
       setHasUsedHints(true);
     } else {
       setHintAction(null);
     }
-  }, [gameState, activeHandIndex, hintsEnabled]);
+  }, [gameState, activeHandIndex, hintsEnabled, playerHands, dealerHand]);
+
+  // 在每局结算后，将待写入的 Simulation 统计落盘（不记录使用提示的局）
+  useEffect(() => {
+    if (!roundResult) return;
+    if (hasUsedHints) {
+      pendingSimStatsRef.current = null;
+      return;
+    }
+    if (!pendingSimStatsRef.current) return;
+    recordSimRoundStats(pendingSimStatsRef.current);
+    pendingSimStatsRef.current = null;
+  }, [roundResult, hasUsedHints]);
 
   if (gameState === SimState.Setup) {
     return (
-      <div className="max-w-md mx-auto space-y-6 pt-6">
+      <div className="relative max-w-md mx-auto space-y-6 pt-6">
         <div className="mb-6 text-center">
           <h2 className="text-3xl font-bold text-green-400 mb-2">Simulation Setup</h2>
           <p className="text-gray-400 text-sm md:text-base"></p>
@@ -411,7 +494,13 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
                 onClick={() => setBankroll(100)}
                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm font-semibold transition"
               >
-                Reset (100)
+                100
+              </button>
+              <button
+                onClick={() => setBankroll(500)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm font-semibold transition"
+              >
+                500
               </button>
             </div>
           </div>
@@ -423,6 +512,48 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
         >
           Start Table
         </button>
+
+        {leaveSummary && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+            <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl px-6 py-5 max-w-md w-full text-center space-y-3">
+              <div className="text-sm uppercase tracking-widest text-gray-400">Session Summary</div>
+              <div
+                className={`text-2xl md:text-3xl font-black ${
+                  leaveSummary.delta > 0
+                    ? 'text-green-400'
+                    : leaveSummary.delta < 0
+                    ? 'text-red-400'
+                    : 'text-gray-200'
+                }`}
+              >
+                {leaveSummary.delta > 0 &&
+                  `You win $${leaveSummary.delta} in total, that is x(${leaveSummary.multiplier.toFixed(2)})!`}
+                {leaveSummary.delta < 0 &&
+                  `You lose $${Math.abs(leaveSummary.delta)} in total, that is x(${leaveSummary.multiplier.toFixed(2)})!`}
+                {leaveSummary.delta === 0 &&
+                  `You broke even, that is x(${leaveSummary.multiplier.toFixed(2)})!`}
+              </div>
+              <div className="text-lg text-white font-semibold">Rounds played: {leaveSummary.rounds}</div>
+              {leaveSummary.achievements > 0 && (
+                <div className="text-yellow-300 font-semibold">
+                  ({leaveSummary.achievements} more achievement{leaveSummary.achievements > 1 ? 's' : ''} gained!)
+                </div>
+              )}
+              {leaveSummary.usedHints && (
+                <div className="text-xs text-red-300">Stats disabled for this session (hints used).</div>
+              )}
+              {!leaveSummary.hasPlayed && (
+                <div className="text-xs text-gray-400">No rounds played this table.</div>
+              )}
+              <button
+                onClick={() => setLeaveSummary(null)}
+                className="w-full mt-2 px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-semibold border border-gray-700 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -453,8 +584,8 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
       actions.push(Action.Split);
     }
 
-    // Surrender: 只在前两张牌时允许，且规则允许
-    if (activeHand.cards.length === 2 && rules.surrender !== 'none') {
+    // Surrender: 只在前两张牌时允许，且规则允许；拆牌后不允许再投降
+    if (activeHand.cards.length === 2 && rules.surrender !== 'none' && !roundFlagsRef.current.splitUsed) {
       actions.push(Action.Surrender);
     }
 
@@ -625,7 +756,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
               onClick={handleLeaveTable}
               className="w-full max-w-md px-8 py-4 rounded-xl font-bold text-lg shadow-xl transition-all duration-200 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white border-2 border-red-500 hover:shadow-red-500/50"
             >
-              Leave Table (Reset to Setup)
+              Leave Table
             </button>
           </div>
         )}
@@ -658,6 +789,49 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
           </div>
         )}
       </div>
+
+      {leaveSummary && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl px-6 py-5 max-w-md w-full text-center space-y-3">
+            <div className="text-sm uppercase tracking-widest text-gray-400">Session Summary</div>
+            <div
+              className={`text-2xl md:text-3xl font-black ${
+                leaveSummary.delta > 0
+                  ? 'text-green-400'
+                  : leaveSummary.delta < 0
+                  ? 'text-red-400'
+                  : 'text-gray-200'
+              }`}
+            >
+              {leaveSummary.delta > 0 &&
+                `You win $${leaveSummary.delta} in total, that is x(${leaveSummary.multiplier.toFixed(2)})!`}
+              {leaveSummary.delta < 0 &&
+                `You lose $${Math.abs(leaveSummary.delta)} in total, that is x(${leaveSummary.multiplier.toFixed(2)})!`}
+              {leaveSummary.delta === 0 &&
+                `You broke even, that is x(${leaveSummary.multiplier.toFixed(2)})!`}
+            </div>
+            {/* <div className="text-lg text-white font-semibold">Total ${leaveSummary.total}</div> */}
+            {!leaveSummary.hasPlayed && (
+              <div className="text-lg text-gray-400 font-semibold">No rounds played this table.</div>
+            )}
+            {leaveSummary.achievements > 0 && (
+              <div className="text-yellow-300 font-semibold">
+                ({leaveSummary.achievements} more achievement{leaveSummary.achievements > 1 ? 's' : ''} gained!)
+              </div>
+            )}
+            {leaveSummary.usedHints && (
+              <div className="text-xs text-red-300">Stats disabled for this session (hints used).</div>
+            )}
+
+            <button
+              onClick={() => setLeaveSummary(null)}
+              className="w-full mt-2 px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-semibold border border-gray-700 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

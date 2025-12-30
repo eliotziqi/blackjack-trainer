@@ -71,6 +71,10 @@ export interface PlayerStats {
   maxStreak: number; // 历史最高连胜
   streakMilestones: number[]; // 已达成的里程碑 [10, 25, 50, 100, ...]
   simMaxMultiplier?: number | null; // Simulation 最大乘数（相对初始资金）
+  simMaxDrawdown?: number | null; // 最大回撤（0-1比例）
+  simCurrentWinStreak?: number; // 当前连赢（Simulation）
+  simMaxWinStreak?: number; // 最大连赢（Simulation）
+  simAchievements?: string[]; // Simulation 成就列表
 }
 
 export enum ViewMode {

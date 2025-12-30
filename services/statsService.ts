@@ -11,6 +11,10 @@ const initialStats: PlayerStats = {
   maxStreak: 0,
   streakMilestones: [],
   simMaxMultiplier: null,
+  simMaxDrawdown: null,
+  simCurrentWinStreak: 0,
+  simMaxWinStreak: 0,
+  simAchievements: [],
 };
 
 export const loadStats = (): PlayerStats => {
@@ -30,6 +34,10 @@ export const loadStats = (): PlayerStats => {
       maxStreak: parsed.maxStreak || 0,
       streakMilestones: parsed.streakMilestones || [],
       simMaxMultiplier: parsed.simMaxMultiplier ?? null,
+      simMaxDrawdown: parsed.simMaxDrawdown ?? null,
+      simCurrentWinStreak: parsed.simCurrentWinStreak ?? 0,
+      simMaxWinStreak: parsed.simMaxWinStreak ?? 0,
+      simAchievements: parsed.simAchievements || [],
     };
   } catch (e) {
     return initialStats;
@@ -89,5 +97,51 @@ export const updateSimMaxMultiplier = (multiplier: number) => {
     stats.simMaxMultiplier = multiplier;
     saveStats(stats);
   }
+  return stats;
+};
+
+// 记录 Simulation 每局数据：连赢、最大回撤、成就
+export const recordSimRoundStats = ({
+  delta,
+  drawdown,
+  achievements = [],
+}: {
+  delta: number; // 本局净变化（新总额-本局开始总额）
+  drawdown: number; // 本局结束时的回撤比例（0-1）
+  achievements?: string[];
+}) => {
+  const stats = loadStats();
+
+  // 连赢：胜利+1，其他归零
+  const current = delta > 0 ? (stats.simCurrentWinStreak || 0) + 1 : 0;
+  stats.simCurrentWinStreak = current;
+  if (!stats.simMaxWinStreak || current > stats.simMaxWinStreak) {
+    stats.simMaxWinStreak = current;
+  }
+
+  // 最大回撤：取最大值
+  if (!Number.isNaN(drawdown)) {
+    const clamped = Math.max(0, drawdown);
+    if (stats.simMaxDrawdown === null || stats.simMaxDrawdown === undefined || clamped > stats.simMaxDrawdown) {
+      stats.simMaxDrawdown = clamped;
+    }
+  }
+
+  // 成就去重合并
+  if (achievements.length) {
+    const existing = new Set(stats.simAchievements || []);
+    achievements.forEach(a => existing.add(a));
+    stats.simAchievements = Array.from(existing);
+  }
+
+  saveStats(stats);
+  return stats;
+};
+
+// 结束一段 Simulation 会话时重置当前连赢（不清空最大值）
+export const resetSimCurrentWinStreak = () => {
+  const stats = loadStats();
+  stats.simCurrentWinStreak = 0;
+  saveStats(stats);
   return stats;
 };

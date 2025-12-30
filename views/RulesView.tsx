@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { GameRules, ViewMode } from '../types';
+import React, { useEffect, useState } from 'react';
+import { GameRules, SimState, ViewMode } from '../types';
 import RuleToggle from '../components/ui/RuleToggle';
 import RuleItemWithInfo from '../components/ui/RuleItemWithInfo';
 import RuleExplanation from '../components/ui/RuleExplanation';
@@ -18,6 +18,30 @@ const RulesView: React.FC<RulesViewProps> = ({ rules, setRules }) => {
     surrender: 'late',
     blackjackPayout: 1.5,
   };
+
+  const SIM_STATE_KEY = 'bj_sim_state_v1';
+  const [simLocked, setSimLocked] = useState(false);
+
+  const evaluateSimLock = () => {
+    try {
+      const raw = localStorage.getItem(SIM_STATE_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      const state = parsed?.gameState as SimState | undefined;
+      return state !== undefined && state !== SimState.Setup;
+    } catch {
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    setSimLocked(evaluateSimLock());
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === SIM_STATE_KEY) setSimLocked(evaluateSimLock());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // 规则说明状态
   const [explanationState, setExplanationState] = useState<{
@@ -39,7 +63,10 @@ const RulesView: React.FC<RulesViewProps> = ({ rules, setRules }) => {
   };
 
   const handleResetToDefault = () => {
-    setRules(DEFAULT_RULES);
+    setRules({
+      ...DEFAULT_RULES,
+      blackjackPayout: simLocked ? rules.blackjackPayout : DEFAULT_RULES.blackjackPayout,
+    });
   };
   return (
     <div className="space-y-6 max-w-md mx-auto">
@@ -127,14 +154,22 @@ Surrender is most useful when you have a weak hand against a strong dealer card.
 Choosing 6:5 increases the house edge. Stick with 3:2 when possible.`
           )}
         >
+          {simLocked && (
+            <div className="mt-2 inline-flex items-center gap-2 text-xs text-amber-300 bg-amber-900/20 border border-amber-700/60 rounded pl-2 pr-0.5 py-1">
+              <span role="img" aria-label="lock">🔒</span>
+              <span>Simulation in progress, leave table to change</span>
+            </div>
+          )}
           <select
             className="bg-gray-700 text-white rounded p-2"
             value={rules.blackjackPayout}
             onChange={(e) => setRules({...rules, blackjackPayout: parseFloat(e.target.value) as 1.5 | 1.2})}
+            disabled={simLocked}
           >
             <option value={1.5}>3:2 (1.5x)</option>
             <option value={1.2}>6:5 (1.2x)</option>
           </select>
+
         </RuleItemWithInfo>
 
         <RuleItemWithInfo
