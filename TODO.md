@@ -35,14 +35,6 @@
 ## 📌 待办 (Backlog)
 
 ### 高优先级 (P0)
-- [x] Rules 页面优化
-  - [x] "Reset to Default" 按钮（恢复赌场最常见规则）
-  - [x] 规则设置项后增加问号图标，点击弹框解释规则影响
-- [x] 统一所有View的顶部标题格式
-
-- [ ] 修复 Split 按钮不可用时的禁用状态
-- [x] 添加键盘快捷键支持（H/S/D/P/R）
-- [x] 添加导航栏快捷键（1-5 对应 Rules/Strategy/Practice/Sim/Stats）
 
 ### 中优先级 (P1)
 - [ ] 添加音效（正确/错误/发牌）
@@ -59,29 +51,9 @@
 
 ---
 
-## ✅ 已完成 (Done)
-
-### 2025-12-29
-- [x] 项目重构：App.tsx 从 774 行优化到 84 行
-- [x] 创建 views/ 目录结构
-- [x] 创建 components/ui/ 和 components/icons/
-- [x] 移除 Gemini API 依赖
-- [x] 实现策略解释本地化
-- [x] 更新 README.md 文档
-
----
-
 ## 🐛 Bug 修复
 
 - [ ] 🔴 高：Split 后的手牌计算错误
-- [x] 🟡 中：Stats 页面 "Reset Statistics" 按钮点击无响应
-  - **位置**: `views/StatsView.tsx`
-  - **现象**: ~~按钮点击后没有清空统计数据~~ **已修复**
-  - **解决**: 添加 `handleReset` 函数，调用 `clearStats()` 后触发 `onReset()`
-- [x] 🟡 中：Performance 统计显示问题 - 答错后仍显示 N/A 而非 0%
-  - **位置**: `views/StatsView.tsx`
-  - **现象**: ~~第一次答错时，Performance 显示为 N/A 而非 0%~~ **已修复**
-  - **解决**: 改进 `calcAccuracy()` 函数，区分"无数据"(-1) 和 "0%准确度"(0)
 - [ ] 🟡 中：Dealer A 时 Surrender 逻辑不准确
 - [ ] 🟢 低：统计页面的百分比显示精度问题
 

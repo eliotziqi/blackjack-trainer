@@ -2,6 +2,8 @@
 
 一个专注于 21 点基本策略训练的 Web 应用，帮助用户通过系统化练习掌握最优决策。
 
+**🌐 在线体验**: [https://eliotziqi.github.io/blackjack-trainer/](https://eliotziqi.github.io/blackjack-trainer/)
+
 ## ✨ 核心功能
 
 ### 1. 规则配置 (Rules)
@@ -53,6 +55,9 @@ npm run build
 
 # 4. 预览生产构建
 npm run preview
+
+# 5. 部署到 GitHub Pages
+npm run deploy
 ```
 
 ### 项目结构
@@ -146,42 +151,6 @@ blackjack-trainer/
 - **策略算法**: `services/strategyEngine.ts`
 - **EV 计算**: `services/evCalculator.ts`（修改 `SIMULATION_ROUNDS` 调整精度）
 - **统计服务**: `services/statsService.ts`
-
-### 代码规范
-- ✅ 使用 TypeScript 强类型
-- ✅ 组件使用 React Hooks
-- ✅ Props 定义 interface
-- ✅ 业务逻辑与 UI 分离
-- ✅ 单一职责原则
-
-## 📝 开发日志
-
-### 2025-12-29
-- ✅ 完成项目重构：将 774 行的 App.tsx 拆分为模块化结构
-- ✅ 创建 `views/` 目录，6 个页面组件独立管理
-- ✅ 创建 `components/ui/` 和 `components/icons/` 目录
-- ✅ 实现 Practice 模式交互锁机制，防止重复点击
-- ✅ 清理代码，App.tsx 从 774 行减少到 84 行（↓ 89%）
-- ✅ 移除 Gemini API 依赖，策略解释完全本地化
-
-### 待办事项
-
-**高优先级 (P0)**
-- [ ] Practice 模式 UI 改进：按钮布局优化
-- [ ] 添加连胜 Streak 显示
-- [ ] 优化 Dealer/Player 区域间距
-
-**中优先级 (P1)**
-- [ ] 添加按钮点击动画和过渡效果
-- [ ] 实现收牌动画（模拟 Dealer 收牌）
-- [ ] 错误时显示 EV 对比信息
-
-**低优先级 (P2)**
-- [ ] 添加卡牌计数训练模式
-- [ ] 支持多人游戏场景模拟
-- [ ] 导出练习数据为 CSV
-- [ ] 添加语音提示功能
-- [ ] 移动端适配优化
 
 ## 🔗 相关资源
 
