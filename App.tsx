@@ -67,7 +67,7 @@ const App: React.FC = () => {
           <PracticeView globalRules={rules} stats={stats} />
         )}
         {view === ViewMode.Scenario && (
-          <ScenarioView globalRules={rules} />
+          <ScenarioView globalRules={rules} navigate={navigate} />
         )}
         {view === ViewMode.Simulation && (
           <SimulationView globalRules={rules} />

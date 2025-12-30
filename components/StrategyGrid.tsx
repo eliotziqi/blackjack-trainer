@@ -34,18 +34,20 @@ const StrategyGrid: React.FC<StrategyGridProps> = ({ rules, onCellClick }) => {
   };
 
   const renderGrid = (title: string, rows: { label: string, type: HandType, val: number, isPair?: boolean }[]) => (
-    <div className="mb-8 overflow-x-auto">
-      <h3 className="text-xl font-bold mb-2 text-gray-200 sticky left-0">{title}</h3>
-      <div className="min-w-max">
+    <div className="mb-8 overflow-x-auto rounded-lg border border-gray-700 bg-gray-800">
+      <h3 className="text-xl font-bold p-4 pb-2 text-gray-200">{title}</h3>
+      <div className="min-w-max p-4 pt-2">
         <div className="flex">
           <div className="w-12 sticky left-0 bg-gray-900 z-10"></div>
           {dealerUpCards.map(d => (
-            <div key={d} className="w-10 text-center font-bold text-gray-400 pb-1">{d === 11 ? 'A' : d}</div>
+            <div key={d} className="w-10 h-8 text-center font-bold text-gray-400 pb-1 flex items-center justify-center">
+              {d === 11 ? 'A' : d}
+            </div>
           ))}
         </div>
         {rows.map((row) => (
           <div key={row.label} className="flex mb-1">
-            <div className="w-12 font-bold text-gray-300 flex items-center justify-center bg-gray-800 sticky left-0 z-10 border-r border-gray-700">
+            <div className="w-12 font-bold text-gray-300 flex items-center justify-center bg-gray-700 sticky left-0 z-10 rounded-l border border-gray-600">
               {row.label}
             </div>
             {dealerUpCards.map((dVal) => {
@@ -80,7 +82,8 @@ const StrategyGrid: React.FC<StrategyGridProps> = ({ rules, onCellClick }) => {
                 <div
                   key={`${row.label}-${dVal}`}
                   onClick={() => onCellClick(row.type, row.isPair ? row.label : row.val, dVal)}
-                  className={`w-10 h-10 flex items-center justify-center font-bold cursor-pointer hover:opacity-80 border border-gray-800 text-sm ${getActionColor(action)}`}
+                  className={`w-10 h-8 flex items-center justify-center font-bold cursor-pointer transition-all duration-150 hover:scale-110 hover:shadow-lg hover:z-20 border border-gray-700 text-xs md:text-sm ${getActionColor(action)} rounded`}
+                  title={`${row.label} vs ${dVal === 11 ? 'A' : dVal}: ${action}`}
                 >
                   {getActionLabel(action)}
                 </div>

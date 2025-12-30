@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameRules, Action, Hand, Card as CardType, Rank, Suit, HandType } from '../types';
+import { GameRules, Action, Hand, Card as CardType, Rank, Suit, HandType, ViewMode } from '../types';
 import { createHand, calculateHandValue, isSoftHand } from '../services/blackjackLogic';
 import { getBasicStrategyAction, getStrategyExplanation } from '../services/strategyEngine';
 import { calculateAllActionEVs, EVResult } from '../services/evCalculator';
@@ -7,9 +7,10 @@ import Card from '../components/Card';
 
 interface ScenarioViewProps {
   globalRules: GameRules;
+  navigate: (view: ViewMode) => void;
 }
 
-const ScenarioView: React.FC<ScenarioViewProps> = ({ globalRules }) => {
+const ScenarioView: React.FC<ScenarioViewProps> = ({ globalRules, navigate }) => {
   // Snapshot rules on entry
   const rules = useRef(globalRules).current;
   
@@ -20,6 +21,23 @@ const ScenarioView: React.FC<ScenarioViewProps> = ({ globalRules }) => {
   const [displayHand, setDisplayHand] = useState<Hand | null>(null);
   const [evResults, setEvResults] = useState<EVResult[]>([]);
   const [showEvTable, setShowEvTable] = useState(false);
+
+  // 格式化点数显示（与PracticeView保持一致）
+  const formatHandValue = (cards: CardType[]): string => {
+    const value = calculateHandValue(cards);
+    const hasAce = cards.some(c => c.rank === Rank.Ace);
+    
+    // 🎰 Blackjack 特殊显示
+    if (cards.length === 2 && value === 21) {
+      return 'Blackjack!';
+    }
+    
+    if (!hasAce) return `${value}`;
+    
+    // 计算硬点数（所有 A 算 1）
+    const hardValue = cards.reduce((sum, c) => sum + (c.rank === Rank.Ace ? 1 : c.value), 0);
+    return `${value}/${hardValue}`;
+  };
 
   useEffect(() => {
     const data = localStorage.getItem('temp_scenario');
@@ -97,32 +115,35 @@ const ScenarioView: React.FC<ScenarioViewProps> = ({ globalRules }) => {
 
   return (
     <div className="flex flex-col items-center h-full space-y-6 mt-6 overflow-y-auto pb-20">
-      <h2 className="text-2xl font-bold text-green-400">Scenario Analysis</h2>
+      <div className="text-center">
+        <h2 className="text-3xl font-bold text-green-400 mb-2">Scenario Analysis</h2>
+      </div>
       
-      <div className="flex gap-8">
-        <div className="text-center">
-          <p className="mb-2 text-gray-400">Dealer</p>
-          <Card card={{
-            rank: (scenario.dVal === 11 ? 'A' : scenario.dVal).toString() as Rank, 
-            suit: Suit.Diamonds, 
-            value: scenario.dVal
-          }} />
+      <div className="flex gap-12 md:gap-16 w-full px-8 py-6">
+        <div className="flex-1 text-center">
+          <h3 className="text-gray-400 text-sm tracking-widest uppercase mb-4 h-6 flex items-center justify-center">Dealer Upcard ({scenario.dVal === 11 ? 'A' : scenario.dVal})</h3>
+          <div className="flex justify-center">
+            <Card card={{
+              rank: (scenario.dVal === 11 ? 'A' : scenario.dVal).toString() as Rank, 
+              suit: Suit.Diamonds, 
+              value: scenario.dVal
+            }} />
+          </div>
         </div>
-        <div className="text-center">
-          <p className="mb-2 text-gray-400">You</p>
-          <div className="flex -space-x-12">
+        <div className="flex-1 text-center">
+          <h3 className="text-gray-400 text-sm tracking-widest uppercase mb-4 h-6 flex items-center justify-center">Your Hand ({formatHandValue(displayHand.cards)})</h3>
+          <div className="flex justify-center -space-x-12">
             {displayHand.cards.map((c, i) => <Card key={i} card={c} />)}
           </div>
         </div>
       </div>
 
-      <div className="bg-gray-800 p-6 rounded-lg max-w-lg w-full border border-gray-700">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-gray-400">Optimal Action</span>
-          <span className="text-xl font-bold text-green-400">{optimalAction}</span>
+      <div className="bg-gray-800 p-6 rounded-lg max-w-2xl w-full border border-gray-700 shadow-lg">
+        <div className="flex justify-between items-center mb-5 pb-4 border-b border-gray-700">
+          <span className="text-gray-400 font-semibold">Optimal Action</span>
+          <span className="text-2xl font-bold text-green-400 bg-green-400 bg-opacity-10 px-4 py-2 rounded">{optimalAction}</span>
         </div>
-        <hr className="border-gray-700 mb-4"/>
-        <p className="text-gray-300 italic leading-relaxed mb-4">
+        <p className="text-gray-300 italic leading-relaxed mb-5">
           "{explanation}"
         </p>
 
@@ -159,7 +180,12 @@ const ScenarioView: React.FC<ScenarioViewProps> = ({ globalRules }) => {
         )}
       </div>
       
-      <button className="text-blue-400 underline" onClick={() => window.history.back()}>Back</button>
+      <button 
+        className="mt-4 px-6 py-2 bg-gray-700 hover:bg-gray-600 text-blue-400 hover:text-blue-300 font-semibold transition-colors duration-150 rounded border border-gray-600 hover:border-gray-500"
+        onClick={() => navigate(ViewMode.Strategy)}
+      >
+        ← Back to Strategy
+      </button>
     </div>
   );
 };

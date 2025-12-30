@@ -225,7 +225,7 @@ const PracticeView: React.FC<PracticeViewProps> = ({ globalRules, stats }) => {
       )}
 
       {/* Dealer & Player 左右分布区域 */}
-      <div className="w-full flex gap-8 px-8 py-8">
+      <div className="w-full flex gap-12 md:gap-16 px-8 py-8">
         {/* Dealer 区域 - 左侧 */}
         <div className="flex-1 text-center">
           {/* Title Row - 统一高度确保对齐 */}
