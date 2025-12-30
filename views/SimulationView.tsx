@@ -532,11 +532,44 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
     pendingSimStatsRef.current = null;
   }, [roundResult, hasUsedHints]);
 
-  // Keyboard shortcuts: mirror Practice view
+  // Keyboard shortcuts: action keys + table controls
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (gameState !== SimState.PlayerTurn) return;
+      // Avoid interfering with text inputs; allow F to close summary modal
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
       const key = e.key.toUpperCase();
+
+      if (leaveSummary) {
+        if (key === 'F') {
+          e.preventDefault();
+          setLeaveSummary(null);
+        }
+        return;
+      }
+
+      // Table-level shortcuts
+      if (gameState === SimState.Setup && key === 'F') {
+        e.preventDefault();
+        startGame();
+        return;
+      }
+      if (gameState === SimState.Betting) {
+        if (key === 'F') {
+          e.preventDefault();
+          placeBet();
+          return;
+        }
+        if (key === 'E') {
+          e.preventDefault();
+          handleLeaveTable();
+          return;
+        }
+      }
+
+      // In-hand action shortcuts
+      if (gameState !== SimState.PlayerTurn) return;
       const keyMap: Record<string, Action> = {
         H: Action.Hit,
         S: Action.Stand,
@@ -624,9 +657,12 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
 
         <button
           onClick={startGame}
-          className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-lg shadow-lg transition text-lg"
+          className="relative w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-lg shadow-lg transition text-lg pr-12"
         >
-          Start Table
+          <span className="block text-center">Start Table</span>
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center text-[11px] font-semibold rounded-md border bg-white/10 border-white/40">
+            F
+          </span>
         </button>
 
         {leaveSummary && (
@@ -663,9 +699,10 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
               )}
               <button
                 onClick={() => setLeaveSummary(null)}
-                className="w-full mt-2 px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-semibold border border-gray-700 transition"
+                className="relative w-full mt-2 px-4 py-3 pr-12 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-semibold border border-gray-700 transition"
               >
-                Close
+                <span className="block text-center">Close</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center text-[11px] font-semibold rounded-md border bg-white/10 border-white/40">F</span>
               </button>
             </div>
           </div>
@@ -897,21 +934,27 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
             <button 
               onClick={placeBet} 
               disabled={bankroll < currentBet || currentBet < minSimBet}
-              className={`w-full max-w-md px-8 py-4 rounded-xl font-bold text-lg shadow-xl transition-all duration-200 ${
+              className={`relative w-full max-w-md px-8 py-4 pr-14 rounded-xl font-bold text-lg shadow-xl transition-all duration-200 ${
                 bankroll < currentBet || currentBet < minSimBet
                   ? 'bg-gray-700 cursor-not-allowed text-gray-500 border-2 border-gray-600' 
                   : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white border-2 border-green-500 hover:shadow-green-500/50'
               }`}
             >
-              {bankroll < currentBet || currentBet < minSimBet ? `Min $${minSimBet}` : 'DEAL CARDS'}
+              <span className="block text-center">{bankroll < currentBet || currentBet < minSimBet ? `Min $${minSimBet}` : 'DEAL CARDS'}</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center text-[11px] font-semibold rounded-md border bg-white/10 border-white/40">
+                F
+              </span>
             </button>
 
             {/* Leave Table */}
             <button
               onClick={handleLeaveTable}
-              className="w-full max-w-md px-8 py-4 rounded-xl font-bold text-lg shadow-xl transition-all duration-200 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white border-2 border-red-500 hover:shadow-red-500/50"
+              className="relative w-full max-w-md px-8 py-4 pr-14 rounded-xl font-bold text-lg shadow-xl transition-all duration-200 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white border-2 border-red-500 hover:shadow-red-500/50"
             >
-              Leave Table
+              <span className="block text-center">Leave Table</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center text-[11px] font-semibold rounded-md border bg-white/10 border-white/40">
+                E
+              </span>
             </button>
           </div>
         )}
@@ -981,9 +1024,10 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
 
             <button
               onClick={() => setLeaveSummary(null)}
-              className="w-full mt-2 px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-semibold border border-gray-700 transition"
+              className="relative w-full mt-2 px-4 py-3 pr-12 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-semibold border border-gray-700 transition"
             >
-              Close
+              <span className="block text-center">Close</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center text-[11px] font-semibold rounded-md border bg-white/10 border-white/40">F</span>
             </button>
           </div>
         </div>
