@@ -40,12 +40,13 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
   // 格式化点数显示（软/硬主态规则，匹配 Practice 视图）
   const formatHandValue = (cards: CardType[]): string => {
     const value = calculateHandValue(cards);
-    const hasAce = cards.some(c => c.rank === Rank.Ace);
+    const visibleCards = cards.filter(c => !c.isHidden);
+    const hasAce = visibleCards.some(c => c.rank === Rank.Ace);
 
-    if (cards.length === 2 && value === 21) return 'Blackjack!';
+    if (visibleCards.length === 2 && value === 21) return 'Blackjack!';
     if (!hasAce) return `${value}`;
 
-    const hardValue = cards.reduce((sum, c) => sum + (c.rank === Rank.Ace ? 1 : c.value), 0);
+    const hardValue = visibleCards.reduce((sum, c) => sum + (c.rank === Rank.Ace ? 1 : c.value), 0);
     if (value === hardValue) return `${value}`;
 
     return `${value}/${hardValue}`;
@@ -91,7 +92,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
         h.cards[1].isHidden = false;
         return h;
       });
-      setTimeout(() => resolveRound(pBJ, dBJ), 1000);
+      setTimeout(() => resolveRound(), 1000);
     } else {
       setGameState(SimState.PlayerTurn);
     }
@@ -171,37 +172,83 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
       const { updatedDeck, finalHand } = playDealerTurn(deck, dealerHand, rules);
       setDeck(updatedDeck);
       setDealerHand(finalHand);
-      setTimeout(() => resolveRound(), 1000);
+      setTimeout(() => resolveRound(finalHand), 1000);
     }, 500);
   };
 
-  const resolveRound = (pBJ = false, dBJ = false) => {
+  const resolveRound = (finalDealerHand?: Hand) => {
     setGameState(SimState.Resolving);
     
+    // 使用传入的finalDealerHand，如果没有则用状态中的（用于instant blackjack情况）
+    const dHand = finalDealerHand || dealerHand;
+    
     let payout = 0;
-    const dVal = calculateHandValue(dealerHand.cards);
-    const dHasBJ = calculateHandValue(dealerHand.cards) === 21 && dealerHand.cards.length === 2;
+    const dVal = calculateHandValue(dHand.cards);
+    const dBusted = dVal > 21;
+    const dHasBJ = dVal === 21 && dHand.cards.length === 2;
 
-    playerHands.forEach(h => {
+    console.log('=== Round Resolution ===');
+    console.log('Dealer:', dVal, 'Busted:', dBusted, 'Blackjack:', dHasBJ);
+    console.log('Player hands:', playerHands.length);
+
+    playerHands.forEach((h, idx) => {
       const pVal = calculateHandValue(h.cards);
       const pHasBJ = pVal === 21 && h.cards.length === 2 && !h.canSplit;
       
+      console.log(`Hand ${idx + 1}: Value=${pVal}, Bet=${h.bet}, Busted=${h.isBusted}, BJ=${pHasBJ}, Surrendered=${h.hasSurrendered}`);
+      
+      // Surrender: 返回一半本金
       if (h.hasSurrendered) {
         payout += h.bet * 0.5;
+        console.log(`  → Surrendered, payout +${h.bet * 0.5}`);
         return;
       }
-      if (h.isBusted) return;
       
-      if (pHasBJ && !dHasBJ) {
-        payout += h.bet + (h.bet * rules.blackjackPayout);
-      } else if (dVal > 21) {
-        payout += h.bet * 2;
-      } else if (pVal > dVal) {
-        payout += h.bet * 2;
-      } else if (pVal === dVal) {
-        payout += h.bet;
+      // Player bust: 输掉全部，不返还任何钱
+      if (h.isBusted) {
+        console.log(`  → Player busted, payout +0`);
+        return;
       }
+      
+      // Player Blackjack vs Dealer Blackjack: Push，返还本金
+      if (pHasBJ && dHasBJ) {
+        payout += h.bet;
+        console.log(`  → Both BJ (push), payout +${h.bet}`);
+        return;
+      }
+      
+      // Player Blackjack vs No Dealer Blackjack: 按照规则赔付(3:2或6:5) + 本金
+      if (pHasBJ && !dHasBJ) {
+        const win = h.bet * (1 + rules.blackjackPayout);
+        payout += win;
+        console.log(`  → Player BJ wins, payout +${win}`);
+        return;
+      }
+      
+      // Dealer bust: Player wins，返还本金 + 奖金
+      if (dBusted) {
+        payout += h.bet * 2;
+        console.log(`  → Dealer busted, player wins, payout +${h.bet * 2}`);
+        return;
+      }
+      
+      // 比点数
+      if (pVal > dVal) {
+        // Player wins: 返还本金 + 奖金
+        payout += h.bet * 2;
+        console.log(`  → Player wins (${pVal} > ${dVal}), payout +${h.bet * 2}`);
+      } else if (pVal === dVal) {
+        // Push: 只返还本金
+        payout += h.bet;
+        console.log(`  → Push (${pVal} = ${dVal}), payout +${h.bet}`);
+      } else {
+        console.log(`  → Player loses (${pVal} < ${dVal}), payout +0`);
+      }
+      // pVal < dVal: Player loses，不返还任何钱
     });
+    
+    console.log('Total payout:', payout);
+    console.log('======================');
     
     setBankroll(b => {
       const newBank = b + payout;
@@ -298,6 +345,37 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
   const activeHand = playerHands[activeHandIndex];
   const canPlay = gameState === SimState.PlayerTurn;
 
+  // 动态计算允许的操作（根据当前活动手牌）
+  const getAllowedActions = (): Action[] => {
+    if (!activeHand) return [];
+
+    // Blackjack 只能 Stand
+    const isBlackjack = activeHand.cards.length === 2 && calculateHandValue(activeHand.cards) === 21;
+    if (isBlackjack) return [Action.Stand];
+
+    const actions: Action[] = [Action.Hit, Action.Stand];
+
+    // Double: 只在前两张牌时允许，且需要足够资金
+    if (activeHand.cards.length === 2 && bankroll >= activeHand.bet) {
+      actions.push(Action.Double);
+    }
+
+    // Split: 只在前两张牌且相同rank时允许，且需要足够资金
+    const canSplit = activeHand.cards.length === 2 && 
+                     activeHand.cards[0].rank === activeHand.cards[1].rank &&
+                     bankroll >= activeHand.bet;
+    if (canSplit) {
+      actions.push(Action.Split);
+    }
+
+    // Surrender: 只在前两张牌时允许，且规则允许
+    if (activeHand.cards.length === 2 && rules.surrender !== 'none') {
+      actions.push(Action.Surrender);
+    }
+
+    return actions;
+  };
+
   return (
     <div className="flex flex-col h-full relative">
       <div className="mb-6 text-center w-full pt-6">
@@ -312,8 +390,14 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
           <div className="text-2xl font-bold text-green-400 font-mono">${bankroll}</div>
         </div>
         <div className="flex-1 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg border border-gray-700 px-4 py-3">
-          <div className="text-xs text-gray-500 uppercase tracking-wider mb-0.5">Current Bet</div>
-          <div className="text-2xl font-bold text-yellow-400 font-mono">${currentBet}</div>
+          <div className="text-xs text-gray-500 uppercase tracking-wider mb-0.5">
+            {gameState === SimState.Betting ? 'Current Bet' : 'Total Bet'}
+          </div>
+          <div className="text-2xl font-bold text-yellow-400 font-mono">
+            ${gameState === SimState.Betting 
+              ? currentBet 
+              : playerHands.reduce((sum, h) => sum + h.bet, 0)}
+          </div>
         </div>
         <button 
           onClick={() => setHintsEnabled(!hintsEnabled)} 
@@ -457,20 +541,23 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
           <div className="max-w-2xl mx-auto">
             <ActionControls 
               onAction={handleAction} 
-              allowedActions={[Action.Hit, Action.Stand, Action.Double, Action.Split, Action.Surrender]} 
+              allowedActions={getAllowedActions()} 
             />
           </div>
         )}
         
         {gameState === SimState.Resolving && (
           <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm pointer-events-none px-4 text-center space-y-2">
-            {/* <div className="text-4xl md:text-5xl font-black text-white drop-shadow-lg">🎲 Round Complete</div> */}
             {roundResult && (
               <>
-                <div className="text-4xl md:text-5xl font-black text-white drop-shadow-lg">
+                <div className={`text-4xl md:text-5xl font-black drop-shadow-lg ${
+                  roundResult.delta > 0 ? 'text-green-400' : 
+                  roundResult.delta < 0 ? 'text-red-400' : 
+                  'text-gray-200'
+                }`}>
                   {roundResult.delta > 0 && `You win $${roundResult.delta}`}
                   {roundResult.delta < 0 && `You lose $${Math.abs(roundResult.delta)}`}
-                  {roundResult.delta === 0 && 'Push'}
+                  {roundResult.delta === 0 && 'Even'}
                 </div>
                 <div className="text-xl md:text-2xl font-semibold text-white">Total ${roundResult.total}</div>
               </>
