@@ -23,6 +23,30 @@ const PracticeView: React.FC<PracticeViewProps> = ({ globalRules, stats }) => {
   // 🔒 交互锁：防止动画期间重复点击
   const [animationStage, setAnimationStage] = useState<'idle' | 'busy'>('idle');
   const isBusy = animationStage !== 'idle';
+  
+  // ⌨️ 键盘触发的按钮视觉反馈
+  const [pressedAction, setPressedAction] = useState<Action | null>(null);
+
+  // 🎮 动态计算允许的 action（根据实际手牌和规则）
+  const allowedActions = React.useMemo(() => {
+    const actions = [Action.Hit, Action.Stand, Action.Double];
+    
+    // 只有配对的初始手牌才能 Split
+    const canSplit = 
+      playerHand.cards.length === 2 && 
+      playerHand.cards[0].rank === playerHand.cards[1].rank;
+    
+    if (canSplit) {
+      actions.push(Action.Split);
+    }
+    
+    // 只有当规则允许时才能 Surrender
+    if (rules.surrender !== 'none') {
+      actions.push(Action.Surrender);
+    }
+    
+    return actions;
+  }, [playerHand.cards, rules.surrender]);
 
   // 格式化点数显示（软/硬主态规则）
   const formatHandValue = (cards: CardType[]): string => {
@@ -82,6 +106,11 @@ const PracticeView: React.FC<PracticeViewProps> = ({ globalRules, stats }) => {
       const action = keyMap[key];
       if (action) {
         e.preventDefault();
+        
+        // 触发视觉反馈
+        setPressedAction(action);
+        setTimeout(() => setPressedAction(null), 150);
+        
         handleAction(action);
       }
     };
@@ -157,8 +186,9 @@ const PracticeView: React.FC<PracticeViewProps> = ({ globalRules, stats }) => {
       <div className="w-full pb-8">
          <ActionControls 
             onAction={handleAction} 
-            allowedActions={[Action.Hit, Action.Stand, Action.Double, Action.Split, Action.Surrender]}
+            allowedActions={allowedActions}
             disabled={isBusy}
+            pressedAction={pressedAction}
          />
       </div>
     </div>

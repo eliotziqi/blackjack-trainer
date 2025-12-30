@@ -5,9 +5,10 @@ interface ActionControlsProps {
   onAction: (action: Action) => void;
   allowedActions: Action[];
   disabled?: boolean;
+  pressedAction?: Action | null;
 }
 
-const ActionControls: React.FC<ActionControlsProps> = ({ onAction, allowedActions, disabled }) => {
+const ActionControls: React.FC<ActionControlsProps> = ({ onAction, allowedActions, disabled, pressedAction }) => {
   const getButtonColor = (action: Action, isAllowed: boolean) => {
     const baseColor = (() => {
       switch(action) {
@@ -51,6 +52,8 @@ const ActionControls: React.FC<ActionControlsProps> = ({ onAction, allowedAction
           const isAllowed = isActionAllowed(action);
           const isDisabled = disabled || !isAllowed;
           
+          const isPressed = pressedAction === action;
+          
           return (
             <button
               key={action}
@@ -58,12 +61,15 @@ const ActionControls: React.FC<ActionControlsProps> = ({ onAction, allowedAction
               disabled={isDisabled}
               className={`
                 ${getButtonColor(action, isAllowed)}
-                text-white font-bold py-4 px-6 rounded-lg shadow-lg 
+                text-white font-bold py-4 px-6 rounded-lg
                 flex items-center justify-center
                 w-1/2
-                transform transition 
-                ${!isDisabled ? 'active:scale-95' : ''}
-                ${isDisabled ? 'opacity-30 cursor-not-allowed' : ''}
+                transition-transform transition-shadow duration-150 ease-out
+                ${!isDisabled ? 'hover:scale-[1.02] hover:brightness-110 hover:shadow-lg' : ''}
+                ${!isDisabled ? 'active:scale-[0.98] active:brightness-95' : ''}
+                ${!isDisabled ? 'focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-none' : ''}
+                ${isDisabled ? 'opacity-30 cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none disabled:brightness-100' : ''}
+                ${isPressed ? 'scale-[0.98] brightness-95 ring-2 ring-white/40' : ''}
               `}
             >
               {action}
@@ -78,6 +84,8 @@ const ActionControls: React.FC<ActionControlsProps> = ({ onAction, allowedAction
           const isAllowed = isActionAllowed(action);
           const isDisabled = disabled || !isAllowed;
           
+          const isPressed = pressedAction === action;
+          
           return (
             <button
               key={action}
@@ -85,12 +93,15 @@ const ActionControls: React.FC<ActionControlsProps> = ({ onAction, allowedAction
               disabled={isDisabled}
               className={`
                 ${getButtonColor(action, isAllowed)}
-                text-white font-bold py-3 px-4 rounded-lg shadow-lg 
+                text-white font-bold py-3 px-4 rounded-lg
                 flex items-center justify-center
                 flex-1
-                transform transition 
-                ${!isDisabled ? 'active:scale-95' : ''}
-                ${isDisabled ? 'opacity-30 cursor-not-allowed' : ''}
+                transition-transform transition-shadow duration-150 ease-out
+                ${!isDisabled ? 'hover:scale-[1.02] hover:brightness-110 hover:shadow-lg' : ''}
+                ${!isDisabled ? 'active:scale-[0.98] active:brightness-95' : ''}
+                ${!isDisabled ? 'focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-none' : ''}
+                ${isDisabled ? 'opacity-30 cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none disabled:brightness-100' : ''}
+                ${isPressed ? 'scale-[0.98] brightness-95 ring-2 ring-white/40' : ''}
               `}
             >
               {action}
