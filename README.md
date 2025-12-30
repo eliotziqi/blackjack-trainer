@@ -59,22 +59,37 @@ npm run preview
 
 ```
 blackjack-trainer/
-├── src/
-│   ├── components/          # React 组件
-│   │   ├── ActionControls.tsx   # 动作按钮组件
-│   │   ├── Card.tsx             # 扑克牌组件
-│   │   └── StrategyGrid.tsx     # 策略表格组件
+├── TODO.md                  # 主 TODO 列表
+├── components/              # React 组件
+│   ├── ActionControls.tsx       # 动作按钮组件
+│   ├── Card.tsx                 # 扑克牌组件
+│   ├── StrategyGrid.tsx         # 策略表格组件
 │   │
-│   ├── services/            # 业务逻辑
-│   │   ├── blackjackLogic.ts    # 游戏核心逻辑
-│   │   ├── strategyEngine.ts    # 基本策略引擎
-│   │   ├── evCalculator.ts      # 期望值计算器
-│   │   └── statsService.ts      # 统计数据管理
+│   ├── icons/                   # 图标组件
+│   │   └── index.tsx            # SVG 图标集合
 │   │
-│   ├── App.tsx              # 主应用组件
-│   ├── types.ts             # TypeScript 类型定义
-│   └── index.tsx            # 应用入口
+│   └── ui/                      # 通用 UI 组件
+│       ├── NavButton.tsx        # 底部导航按钮
+│       ├── RuleToggle.tsx       # 规则开关组件
+│       └── StatCard.tsx         # 统计卡片组件
 │
+├── views/                   # 页面视图组件
+│   ├── RulesView.tsx            # 规则配置页面
+│   ├── StrategyView.tsx         # 策略表格页面
+│   ├── PracticeView.tsx         # 练习模式页面
+│   ├── ScenarioView.tsx         # 场景分析页面
+│   ├── SimulationView.tsx       # 游戏模拟页面
+│   └── StatsView.tsx            # 统计数据页面
+│
+├── services/                # 业务逻辑
+│   ├── blackjackLogic.ts        # 游戏核心逻辑
+│   ├── strategyEngine.ts        # 基本策略引擎
+│   ├── evCalculator.ts          # 期望值计算器
+│   └── statsService.ts          # 统计数据管理
+│
+├── App.tsx                  # 主应用（路由 + 布局）
+├── types.ts                 # TypeScript 类型定义
+├── index.tsx                # 应用入口
 ├── index.html               # HTML 模板
 ├── vite.config.ts           # Vite 配置
 ├── tsconfig.json            # TypeScript 配置
@@ -103,19 +118,65 @@ blackjack-trainer/
 
 ## 🔧 开发指南
 
+### 添加新功能页面
+1. 在 `views/` 目录创建新的视图组件
+2. 在 `types.ts` 中添加新的 `ViewMode` 枚举值
+3. 在 `App.tsx` 中导入并添加路由
+4. 在底部导航栏添加按钮
+
+### 修改现有页面
+- **规则配置**: 编辑 `views/RulesView.tsx`
+- **策略表格**: 编辑 `views/StrategyView.tsx`
+- **练习模式**: 编辑 `views/PracticeView.tsx`
+- **场景分析**: 编辑 `views/ScenarioView.tsx`
+- **游戏模拟**: 编辑 `views/SimulationView.tsx`
+- **统计数据**: 编辑 `views/StatsView.tsx`
+
 ### 添加新规则
 1. 在 `types.ts` 的 `GameRules` 接口中添加新字段
-2. 在 `strategyEngine.ts` 中更新策略逻辑
-3. 在 `App.tsx` 的规则配置界面添加控制项
+2. 在 `services/strategyEngine.ts` 中更新策略逻辑
+3. 在 `views/RulesView.tsx` 添加配置控制项
 
-### 自定义策略表格样式
-修改 `components/StrategyGrid.tsx` 中的 Tailwind 类名
+### 自定义 UI 组件
+- **创建新组件**: 在 `components/ui/` 目录创建
+- **修改现有组件**: 编辑对应的 `.tsx` 文件
+- **样式调整**: 使用 Tailwind CSS 类名
 
-### 调整 EV 模拟精度
-在 `services/evCalculator.ts` 中修改 `SIMULATION_ROUNDS` 常量
+### 调整核心逻辑
+- **策略算法**: `services/strategyEngine.ts`
+- **EV 计算**: `services/evCalculator.ts`（修改 `SIMULATION_ROUNDS` 调整精度）
+- **统计服务**: `services/statsService.ts`
 
-## 📝 待办事项
+### 代码规范
+- ✅ 使用 TypeScript 强类型
+- ✅ 组件使用 React Hooks
+- ✅ Props 定义 interface
+- ✅ 业务逻辑与 UI 分离
+- ✅ 单一职责原则
 
+## 📝 开发日志
+
+### 2025-12-29
+- ✅ 完成项目重构：将 774 行的 App.tsx 拆分为模块化结构
+- ✅ 创建 `views/` 目录，6 个页面组件独立管理
+- ✅ 创建 `components/ui/` 和 `components/icons/` 目录
+- ✅ 实现 Practice 模式交互锁机制，防止重复点击
+- ✅ 清理代码，App.tsx 从 774 行减少到 84 行（↓ 89%）
+- ✅ 移除 Gemini API 依赖，策略解释完全本地化
+
+### 待办事项
+
+**高优先级 (P0)**
+- [ ] Practice 模式 UI 改进：按钮布局优化
+- [ ] 添加连胜 Streak 显示
+- [ ] 优化 Dealer/Player 区域间距
+
+**中优先级 (P1)**
+- [ ] 添加按钮点击动画和过渡效果
+- [ ] 实现收牌动画（模拟 Dealer 收牌）
+- [ ] 错误时显示 EV 对比信息
+
+**低优先级 (P2)**
 - [ ] 添加卡牌计数训练模式
 - [ ] 支持多人游戏场景模拟
 - [ ] 导出练习数据为 CSV
