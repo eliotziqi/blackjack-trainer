@@ -71,12 +71,12 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col font-sans">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 p-4 sticky top-0 z-50">
+      <header className="bg-gray-800 border-b border-gray-700 p-4 sticky top-0 z-[60]">
         <div className="max-w-5xl mx-auto flex justify-between items-center">
           <h1 className="text-xl font-bold text-green-400 tracking-wider">BLACKJACK TRAINER</h1>
           <div className="flex space-x-2">
             <div className="text-xs text-gray-400 bg-gray-900 px-2 py-1 rounded border border-gray-700">
-              {rules.dealerHitSoft17 ? 'H17' : 'S17'} • {rules.deckCount}D • {rules.surrender === 'none' ? 'None' : rules.surrender === 'late' ? 'Late' : 'Early'}
+              {rules.dealerHitSoft17 ? 'H17' : 'S17'} • {rules.doubleAfterSplit ? 'DAS' : 'No DAS'} • {rules.surrender === 'none' ? 'None' : rules.surrender === 'late' ? 'Late' : 'Early'} • {rules.deckCount}D
             </div>
           </div>
         </div>
