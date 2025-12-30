@@ -182,7 +182,7 @@ const PracticeView: React.FC<PracticeViewProps> = ({ globalRules, stats }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[60vh]">
+    <div className="flex flex-col items-center justify-between min-h-[60vh] overflow-hidden">
       {/* 键盘快捷键提示 */}
       <div className="w-full text-center pt-2 pb-4 text-gray-400 text-sm">
         Use keyboard shortcuts: Hit(H), Stand(S), Double(D), Split(P), Surrender(R).
