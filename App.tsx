@@ -41,6 +41,33 @@ const App: React.FC = () => {
     setStats(loadStats());
   }, [view]);
 
+  // ⌨️ 键盘快捷键：1-5 对应底部导航栏
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // 如果用户在输入框中，不触发快捷键
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // 1=Rules, 2=Strategy, 3=Practice, 4=Sim, 5=Stats
+      const keyToView: { [key: string]: ViewMode } = {
+        '1': ViewMode.Rules,
+        '2': ViewMode.Strategy,
+        '3': ViewMode.Practice,
+        '4': ViewMode.Simulation,
+        '5': ViewMode.Stats,
+      };
+
+      if (keyToView[e.key]) {
+        navigate(keyToView[e.key]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col font-sans">
       {/* Header */}
@@ -80,11 +107,11 @@ const App: React.FC = () => {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 pb-safe">
         <div className="flex justify-around max-w-5xl mx-auto">
-          <NavButton icon={<SettingsIcon/>} label="Rules" active={view === ViewMode.Rules} onClick={() => navigate(ViewMode.Rules)} />
-          <NavButton icon={<ChartIcon/>} label="Strategy" active={view === ViewMode.Strategy} onClick={() => navigate(ViewMode.Strategy)} />
-          <NavButton icon={<LightningIcon/>} label="Practice" active={view === ViewMode.Practice} onClick={() => navigate(ViewMode.Practice)} />
-          <NavButton icon={<ChipIcon/>} label="Sim" active={view === ViewMode.Simulation} onClick={() => navigate(ViewMode.Simulation)} />
-          <NavButton icon={<BookOpenIcon/>} label="Stats" active={view === ViewMode.Stats} onClick={() => navigate(ViewMode.Stats)} />
+          <NavButton icon={<SettingsIcon/>} label="Rules" active={view === ViewMode.Rules} onClick={() => navigate(ViewMode.Rules)} shortcut="1" />
+          <NavButton icon={<ChartIcon/>} label="Strategy" active={view === ViewMode.Strategy} onClick={() => navigate(ViewMode.Strategy)} shortcut="2" />
+          <NavButton icon={<LightningIcon/>} label="Practice" active={view === ViewMode.Practice} onClick={() => navigate(ViewMode.Practice)} shortcut="3" />
+          <NavButton icon={<ChipIcon/>} label="Sim" active={view === ViewMode.Simulation} onClick={() => navigate(ViewMode.Simulation)} shortcut="4" />
+          <NavButton icon={<BookOpenIcon/>} label="Stats" active={view === ViewMode.Stats} onClick={() => navigate(ViewMode.Stats)} shortcut="5" />
         </div>
       </nav>
     </div>
