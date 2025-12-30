@@ -115,6 +115,29 @@ Surrender is most useful when you have a weak hand against a strong dealer card.
         </RuleItemWithInfo>
 
         <RuleItemWithInfo
+          label="Blackjack Payout"
+          description="Payout when you hit a natural blackjack. 3:2 is player-favorable; 6:5 increases house edge."
+          onInfoClick={() => showExplanation(
+            'Blackjack Payout',
+            `How a natural blackjack (Ace + 10-value) pays out:
+
+3:2 (1.5x): Standard, more favorable to players. A $20 bet pays $30 profit.
+6:5 (1.2x): Worse for players. A $20 bet pays $24 profit.
+
+Choosing 6:5 increases the house edge. Stick with 3:2 when possible.`
+          )}
+        >
+          <select
+            className="bg-gray-700 text-white rounded p-2"
+            value={rules.blackjackPayout}
+            onChange={(e) => setRules({...rules, blackjackPayout: parseFloat(e.target.value) as 1.5 | 1.2})}
+          >
+            <option value={1.5}>3:2 (1.5x)</option>
+            <option value={1.2}>6:5 (1.2x)</option>
+          </select>
+        </RuleItemWithInfo>
+
+        <RuleItemWithInfo
           label="Decks"
           description="Number of card decks in the shoe. More decks reduce player advantage."
           onInfoClick={() => showExplanation(

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameRules, Action, Hand, Card as CardType, SimState } from '../types';
+import { GameRules, Action, Hand, Card as CardType, SimState, Rank } from '../types';
 import { createDeck, shuffleDeck, createHand, calculateHandValue, playDealerTurn } from '../services/blackjackLogic';
 import { getBasicStrategyAction } from '../services/strategyEngine';
 import Card from '../components/Card';
@@ -18,6 +18,8 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
   const [bankroll, setBankroll] = useState(100);
   const [currentBet, setCurrentBet] = useState(25);
   const [deck, setDeck] = useState<CardType[]>([]);
+  const [roundStartBankroll, setRoundStartBankroll] = useState<number | null>(null);
+  const [roundResult, setRoundResult] = useState<{ delta: number; total: number } | null>(null);
   
   // Hands
   const [playerHands, setPlayerHands] = useState<Hand[]>([]);
@@ -35,8 +37,24 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
     setDeck(shuffleDeck(createDeck(rules.deckCount)));
   };
 
+  // 格式化点数显示（软/硬主态规则，匹配 Practice 视图）
+  const formatHandValue = (cards: CardType[]): string => {
+    const value = calculateHandValue(cards);
+    const hasAce = cards.some(c => c.rank === Rank.Ace);
+
+    if (cards.length === 2 && value === 21) return 'Blackjack!';
+    if (!hasAce) return `${value}`;
+
+    const hardValue = cards.reduce((sum, c) => sum + (c.rank === Rank.Ace ? 1 : c.value), 0);
+    if (value === hardValue) return `${value}`;
+
+    return `${value}/${hardValue}`;
+  };
+
   const placeBet = () => {
     if (bankroll < currentBet) return;
+    setRoundStartBankroll(bankroll);
+    setRoundResult(null);
     setBankroll(prev => prev - currentBet);
     setGameState(SimState.Dealing);
     
@@ -185,7 +203,12 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
       }
     });
     
-    setBankroll(b => b + payout);
+    setBankroll(b => {
+      const newBank = b + payout;
+      const start = roundStartBankroll ?? b;
+      setRoundResult({ delta: newBank - start, total: newBank });
+      return newBank;
+    });
     
     setTimeout(() => {
       setPlayerHands([]);
@@ -312,6 +335,11 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
         </div>
       )}
 
+      {/* Blackjack Payout Info */}
+      <div className="text-gray-400 text-sm tracking-widest uppercase mb-4 h-6 flex items-center justify-center">
+        Blackjack pays {rules.blackjackPayout === 1.5 ? '3:2' : '6:5'}
+      </div>
+
       {/* Dealer & Player 左右分布区域 */}
       <div className="w-full flex gap-12 md:gap-16 px-8 py-6 mb-4">
         {/* Dealer 区域 - 左侧 */}
@@ -319,7 +347,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
           {/* Title Row - 统一高度确保对齐 */}
           <h3 className="text-gray-400 text-sm tracking-widest uppercase mb-4 h-6 flex items-center justify-center">
             Dealer {gameState !== SimState.Betting && dealerHand.cards.length > 0 && (
-              <span className="text-gray-400 ml-2">({calculateHandValue(dealerHand.cards)})</span>
+              <span className="text-gray-400 ml-2">({formatHandValue(dealerHand.cards)})</span>
             )}
           </h3>
           {/* Card Stage - 顶部对齐 */}
@@ -337,7 +365,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
           {/* Title Row - 统一高度确保对齐，数字在标题中 */}
           <h3 className="text-gray-400 text-sm tracking-widest uppercase mb-4 h-6 flex items-center justify-center">
             {playerHands.length === 0 ? 'Waiting' : 
-             playerHands.length === 1 ? `Your Hand (${calculateHandValue(playerHands[0].cards)})` :
+             playerHands.length === 1 ? `Your Hand (${formatHandValue(playerHands[0].cards)})` :
              'Your Hands'}
           </h3>
           {/* Card Stage - 顶部对齐 */}
@@ -354,7 +382,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
                 {/* Hand Label - 只在多手牌时显示，包含点数 */}
                 {playerHands.length > 1 && (
                   <div className="text-xs font-semibold text-gray-400 mb-2 px-2 py-1 bg-gray-800 rounded-full border border-gray-700">
-                    Hand {idx + 1} ({calculateHandValue(h.cards)}) • <span className="text-yellow-400">${h.bet}</span>
+                    Hand {idx + 1} ({formatHandValue(h.cards)}) • <span className="text-yellow-400">${h.bet}</span>
                   </div>
                 )}
                 
@@ -435,10 +463,18 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
         )}
         
         {gameState === SimState.Resolving && (
-          <div className="text-center">
-            <div className="inline-block bg-gradient-to-r from-green-600 to-blue-600 text-white text-xl font-bold px-8 py-4 rounded-xl shadow-xl animate-bounce">
-              🎲 Round Complete
-            </div>
+          <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm pointer-events-none px-4 text-center space-y-2">
+            {/* <div className="text-4xl md:text-5xl font-black text-white drop-shadow-lg">🎲 Round Complete</div> */}
+            {roundResult && (
+              <>
+                <div className="text-4xl md:text-5xl font-black text-white drop-shadow-lg">
+                  {roundResult.delta > 0 && `You win $${roundResult.delta}`}
+                  {roundResult.delta < 0 && `You lose $${Math.abs(roundResult.delta)}`}
+                  {roundResult.delta === 0 && 'Push'}
+                </div>
+                <div className="text-xl md:text-2xl font-semibold text-white">Total ${roundResult.total}</div>
+              </>
+            )}
           </div>
         )}
       </div>
