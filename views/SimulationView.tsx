@@ -619,10 +619,10 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
         <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 space-y-6">
           <div className="space-y-3">
             <label className="text-gray-300 font-semibold text-sm">Starting Bankroll</label>
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <button
                 onClick={() => setBankroll(Math.max(10, bankroll - 10))}
-                className="w-10 h-10 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition font-bold flex items-center justify-center"
+                className="w-10 h-10 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition font-bold flex items-center justify-center flex-shrink-0"
               >
                 −
               </button>
@@ -634,11 +634,17 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
               />
               <button
                 onClick={() => setBankroll(bankroll + 10)}
-                className="w-10 h-10 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition font-bold flex items-center justify-center"
+                className="w-10 h-10 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition font-bold flex items-center justify-center flex-shrink-0"
               >
                 +
               </button>
             </div>
+            <input
+              type="number"
+              value={bankroll}
+              onChange={e => setBankroll(Math.max(10, parseInt(e.target.value) || 10))}
+              className="md:hidden w-full bg-gray-900 p-3 rounded-lg text-center text-2xl font-mono text-green-400 border border-gray-700 focus:border-green-400 focus:outline-none"
+            />
             
             {/* Quick Adjust Buttons */}
             <div className="flex gap-2 justify-center">
