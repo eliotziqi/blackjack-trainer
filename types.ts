@@ -51,6 +51,8 @@ export interface GameRules {
   surrender: 'none' | 'early' | 'late';
   blackjackPayout: 1.5 | 1.2; // 3:2 vs 6:5
   simMinBet: 5 | 10 | 15 | 25 | 100;
+  insuranceAllowed?: boolean;
+  evenMoneyAllowed?: boolean;
 }
 
 // Stats Structure
@@ -91,6 +93,7 @@ export enum SimState {
   Setup = 'SETUP', // Bankroll config
   Betting = 'BETTING',
   Dealing = 'DEALING',
+  Insurance = 'INSURANCE',
   PlayerTurn = 'PLAYER_TURN',
   DealerTurn = 'DEALER_TURN',
   Resolving = 'RESOLVING',

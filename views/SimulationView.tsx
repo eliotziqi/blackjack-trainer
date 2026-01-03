@@ -71,6 +71,9 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
       roundStartBankroll: game.roundStartBankroll,
       roundResult: game.roundResult,
       roundsPlayed,
+      insuranceBet: game.insuranceBet,
+      insuranceOffered: game.insuranceOffered,
+      evenMoneyTaken: game.evenMoneyTaken,
     },
     game.sessionAchievementsRef,
     game.pendingSimStatsRef
@@ -82,6 +85,14 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
     const sum = entries.reduce((acc, [denom, count]) => acc + parseFloat(denom) * count, 0);
     return Math.round(sum * 100) / 100;
   }, [chipCounts]);
+
+  const mainHandBet = game.playerHands[0]?.bet ?? currentBet;
+  const maxInsuranceCost = Math.round((mainHandBet / 2) * 100) / 100;
+  const canBuyInsurance = game.bankroll >= maxInsuranceCost && maxInsuranceCost > 0;
+  const playerHasBJ = useMemo(() => {
+    const cards = game.playerHands[0]?.cards ?? [];
+    return cards.length === 2 && calculateHandValue(cards) === 21;
+  }, [game.playerHands]);
 
   const canAfford = (addAmount: number) => currentBet + addAmount <= game.bankroll;
 
@@ -340,6 +351,47 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
       <div className="text-gray-400 text-sm tracking-widest uppercase mb-4 h-6 flex items-center justify-center">
         Simulation min bet: ${minSimBet}
       </div>
+
+      {game.gameState === SimState.Insurance && (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-4 max-w-2xl mx-auto shadow-lg">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-lg font-semibold text-yellow-300">Dealer shows A — Insurance?</div>
+            <div className="text-sm text-gray-400">Up to half bet</div>
+          </div>
+          <div className="text-sm text-gray-300 mb-4">
+            Insurance costs ${maxInsuranceCost.toFixed(2)} (2:1 if dealer has blackjack). Even Money locks 1:1 on your blackjack.
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => game.handleInsuranceDecision('insure')}
+              disabled={!canBuyInsurance}
+              className={`px-4 py-2 rounded-lg font-semibold border transition ${
+                canBuyInsurance
+                  ? 'bg-yellow-500 text-black border-yellow-400 hover:bg-yellow-400'
+                  : 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed'
+              }`}
+            >
+              Buy Insurance (${maxInsuranceCost.toFixed(2)})
+            </button>
+
+            {rules.evenMoneyAllowed && playerHasBJ && (
+              <button
+                onClick={() => game.handleInsuranceDecision('even')}
+                className="px-4 py-2 rounded-lg font-semibold border bg-green-500 text-black border-green-400 hover:bg-green-400 transition"
+              >
+                Take Even Money (1:1)
+              </button>
+            )}
+
+            <button
+              onClick={() => game.handleInsuranceDecision('decline')}
+              className="px-4 py-2 rounded-lg font-semibold border bg-gray-800 text-gray-200 border-gray-600 hover:border-gray-500 transition"
+            >
+              No Insurance
+            </button>
+          </div>
+        </div>
+      )}
 
       <GameBoard
         gameState={game.gameState}

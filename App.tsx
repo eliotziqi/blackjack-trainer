@@ -34,7 +34,7 @@ const App: React.FC = () => {
     try {
       const saved = localStorage.getItem('bj_rules_v1');
       if (saved) {
-        return JSON.parse(saved);
+        return { ...DEFAULT_RULES, ...JSON.parse(saved) };
       }
     } catch (e) {
       console.error('Failed to load rules from localStorage:', e);

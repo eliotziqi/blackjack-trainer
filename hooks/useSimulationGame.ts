@@ -34,6 +34,9 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
   const [deck, setDeck] = useState<CardType[]>([]);
   const [roundStartBankroll, setRoundStartBankroll] = useState<number | null>(null);
   const [roundResult, setRoundResult] = useState<RoundResult | null>(null);
+  const [insuranceBet, setInsuranceBet] = useState(0);
+  const [insuranceOffered, setInsuranceOffered] = useState(false);
+  const [evenMoneyTaken, setEvenMoneyTaken] = useState(false);
 
   const [playerHands, setPlayerHands] = useState<Hand[]>([]);
   const [activeHandIndex, setActiveHandIndex] = useState(0);
@@ -97,6 +100,9 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     roundFlagsRef.current = { hadBlackjack: false, didAllIn: allIn, splitUsed: false, das: false };
     setRoundStartBankroll(bankroll);
     setRoundResult(null);
+    setInsuranceBet(0);
+    setInsuranceOffered(false);
+    setEvenMoneyTaken(false);
     setBankroll((prev) => Math.round((prev - currentBet) * 100) / 100);
     setGameState(SimState.Dealing);
 
@@ -121,9 +127,20 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     setActiveHandIndex(0);
     setDealerHand(dHand);
 
-    // Check for instant blackjack
+    // Insurance branch: dealer upcard Ace
+    const dealerUpAce = rules.insuranceAllowed && dHand.cards[0]?.rank === Rank.Ace;
+
+    // Check for natural blackjack (player) for even money option
     const pBJ = calculateHandValue([p1, p2]) === 21;
     const dBJ = calculateHandValue([d1, d2]) === 21;
+
+    if (dealerUpAce) {
+      setInsuranceOffered(true);
+      setInsuranceBet(0);
+      setEvenMoneyTaken(false);
+      setGameState(SimState.Insurance);
+      return;
+    }
 
     if (pBJ || dBJ) {
       const revealedDealerHand = {
@@ -223,6 +240,48 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     }
   };
 
+  const handleInsuranceDecision = (choice: 'insure' | 'decline' | 'even') => {
+    if (!insuranceOffered) return;
+    const mainBet = playerHands[0]?.bet ?? 0;
+    const maxInsurance = Math.min(mainBet / 2, bankroll);
+    let placed = 0;
+    let even = false;
+
+    if (choice === 'insure') {
+      placed = maxInsurance > 0 ? Math.round(maxInsurance * 100) / 100 : 0;
+      if (placed > 0) setBankroll((b) => Math.round((b - placed) * 100) / 100);
+    }
+
+    if (choice === 'even') {
+      const pVal = calculateHandValue(playerHands[0]?.cards ?? []);
+      const isBJ = pVal === 21 && (playerHands[0]?.cards.length ?? 0) === 2;
+      if (!isBJ) return;
+      even = true;
+      placed = 0;
+    }
+
+    setInsuranceBet(placed);
+    setEvenMoneyTaken(even);
+    setInsuranceOffered(false);
+
+    // Peek dealer for blackjack
+    const revealedDealerHand = {
+      ...dealerHand,
+      cards: dealerHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c)),
+    };
+    setDealerHand(revealedDealerHand);
+    const dHasBJ = calculateHandValue(revealedDealerHand.cards) === 21 && revealedDealerHand.cards.length === 2;
+
+    if (dHasBJ || even) {
+      // Resolve immediately (dealer blackjack or even-money chosen)
+      setTimeout(() => resolveRound(revealedDealerHand, [...playerHands]), 500);
+      return;
+    }
+
+    // No dealer blackjack: insurance loses if any, continue to player turn
+    setGameState(SimState.PlayerTurn);
+  };
+
   const playDealer = () => {
     // First, reveal the dealer's hidden card in UI
     const revealedDealerHand = {
@@ -247,6 +306,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     const hands = handsOverride || playerHands;
 
     let payout = 0;
+    // Insurance payout (if dealer has blackjack) and Even Money handling will be applied below
     const dVal = calculateHandValue(dHand.cards);
     const dBusted = dVal > 21;
     const dHasBJ = dVal === 21 && dHand.cards.length === 2;
@@ -280,13 +340,24 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
 
       // Player Blackjack vs Dealer Blackjack: Push，返还本金
       if (pHasBJ && dHasBJ) {
-        payout += h.bet;
-        console.log(`  → Both BJ (push), payout +${h.bet}`);
+        if (evenMoneyTaken) {
+          payout += h.bet * 2;
+          console.log(`  → Even money (dealer BJ), payout +${h.bet * 2}`);
+        } else {
+          payout += h.bet;
+          console.log(`  → Both BJ (push), payout +${h.bet}`);
+        }
         return;
       }
 
       // Player Blackjack vs No Dealer Blackjack: 按照规则赔付(3:2或6:5) + 本金
       if (pHasBJ && !dHasBJ) {
+        if (evenMoneyTaken) {
+          const win = h.bet * 2; // 1:1 payout total return
+          payout += win;
+          console.log(`  → Even money taken, payout +${win}`);
+          return;
+        }
         const win = h.bet * (1 + rules.blackjackPayout);
         payout += win;
         console.log(`  → Player BJ wins, payout +${win}`);
@@ -314,6 +385,16 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       }
       // pVal < dVal: Player loses，不返还任何钱
     });
+
+    // Insurance settle after knowing dealer blackjack outcome
+    if (insuranceBet > 0) {
+      if (dHasBJ) {
+        payout += insuranceBet * 3; // 2:1 win plus return stake
+        console.log(`Insurance wins, payout +${insuranceBet * 3}`);
+      } else {
+        console.log('Insurance loses, payout +0');
+      }
+    }
 
     console.log('Total payout:', payout);
 
@@ -343,6 +424,9 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     setTimeout(() => {
       setPlayerHands([]);
       setDealerHand(createHand());
+      setInsuranceBet(0);
+      setInsuranceOffered(false);
+      setEvenMoneyTaken(false);
       setGameState(SimState.Betting);
     }, 2500);
   };
@@ -353,6 +437,9 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     setActiveHandIndex(0);
     setDealerHand(createHand(null));
     setRoundResult(null);
+    setInsuranceBet(0);
+    setInsuranceOffered(false);
+    setEvenMoneyTaken(false);
   };
 
   const restoreState = (savedState: any) => {
@@ -368,6 +455,9 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       setDealerHand(savedState.dealerHand ?? createHand());
       setRoundStartBankroll(savedState.roundStartBankroll ?? null);
       setRoundResult(savedState.roundResult ?? null);
+      setInsuranceBet(savedState.insuranceBet ?? 0);
+      setInsuranceOffered(savedState.insuranceOffered ?? false);
+      setEvenMoneyTaken(savedState.evenMoneyTaken ?? false);
     } catch (e) {
       console.error('Failed to restore sim state:', e);
     }
@@ -385,6 +475,9 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     playerHands,
     activeHandIndex,
     dealerHand,
+    insuranceBet,
+    insuranceOffered,
+    evenMoneyTaken,
     canPlay,
     activeHand,
     // Refs
@@ -408,5 +501,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     setRoundResult,
     resetGame,
     restoreState,
+    // Insurance
+    handleInsuranceDecision,
   };
 };

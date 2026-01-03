@@ -16,6 +16,9 @@ interface SimulationState {
   roundStartBankroll: number | null;
   roundResult: { delta: number; total: number } | null;
   roundsPlayed: number;
+  insuranceBet?: number;
+  insuranceOffered?: boolean;
+  evenMoneyTaken?: boolean;
 }
 
 interface LeaveSummary {
@@ -52,6 +55,9 @@ export const useSimulationPersistence = (
       roundResult: state.roundResult,
       roundsPlayed: state.roundsPlayed,
       chipCounts: state.chipCounts,
+      insuranceBet: state.insuranceBet ?? 0,
+      insuranceOffered: state.insuranceOffered ?? false,
+      evenMoneyTaken: state.evenMoneyTaken ?? false,
     };
     localStorage.setItem(SIM_STATE_KEY, JSON.stringify(payload));
   }, [state]);
