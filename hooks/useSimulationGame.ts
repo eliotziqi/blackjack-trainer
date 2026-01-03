@@ -158,7 +158,6 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     const currentHand = playerHands[activeHandIndex];
     let d = [...deck];
     let nextHand = false;
-    const updatedHands = [...playerHands];
     let newHand = { ...currentHand };
 
     if (action === Action.Hit) {
@@ -176,18 +175,32 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       if (bankroll < currentHand.bet) return;
       setBankroll((b) => b - currentHand.bet);
       const card = d.pop()!;
-      newHand = {
-        ...currentHand,
-        cards: [...currentHand.cards, card],
-        bet: currentHand.bet * 2,
-        isCompleted: true,
-        hasDoubled: true,
-      };
-      if (calculateHandValue(newHand.cards) > 21) newHand.isBusted = true;
+      const doubledBet = currentHand.bet * 2;
+      const cards = [...currentHand.cards, card];
+      const isBusted = calculateHandValue(cards) > 21;
+
+      const updatedHands = playerHands.map((h, idx) =>
+        idx === activeHandIndex
+          ? {
+              ...h,
+              cards,
+              bet: doubledBet,
+              isCompleted: true,
+              hasDoubled: true,
+              isBusted,
+            }
+          : h
+      );
+
       if (roundFlagsRef.current.splitUsed) {
         roundFlagsRef.current.das = true;
       }
+
+      setPlayerHands(updatedHands);
+      setDeck(d);
       nextHand = true;
+      // Exit early so we don't overwrite updatedHands below
+      newHand = updatedHands[activeHandIndex];
     } else if (action === Action.Surrender) {
       newHand = { ...currentHand, isCompleted: true, hasSurrendered: true };
       nextHand = true;
@@ -212,30 +225,59 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       return;
     }
 
-    updatedHands[activeHandIndex] = newHand;
-    setPlayerHands(updatedHands);
-    setDeck(d);
+    if (action !== Action.Double) {
+      const updatedHands = [...playerHands];
+      updatedHands[activeHandIndex] = newHand;
+      setPlayerHands(updatedHands);
+      setDeck(d);
 
-    if (nextHand) {
-      const allHandsDone = updatedHands.every((h) => h.isCompleted);
-      const onlySurrenderOrBust = allHandsDone && updatedHands.every((h) => h.hasSurrendered || h.isBusted);
+      if (nextHand) {
+        const allHandsDone = updatedHands.every((h) => h.isCompleted);
+        const onlySurrenderOrBust = allHandsDone && updatedHands.every((h) => h.hasSurrendered || h.isBusted);
 
-      if (onlySurrenderOrBust) {
-        // 如果所有手牌都是投降或爆牌，仍要展示庄家的隐藏牌，给用户反应时间
-        const revealedDealer = {
-          ...dealerHand,
-          cards: dealerHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c)),
-        };
-        setDealerHand(revealedDealer);
-        setTimeout(() => resolveRound(revealedDealer, updatedHands), 1500);
-        return;
+        if (onlySurrenderOrBust) {
+          // 如果所有手牌都是投降或爆牌，仍要展示庄家的隐藏牌，给用户反应时间
+          const revealedDealer = {
+            ...dealerHand,
+            cards: dealerHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c)),
+          };
+          setDealerHand(revealedDealer);
+          setTimeout(() => resolveRound(revealedDealer, updatedHands), 1500);
+          return;
+        }
+
+        if (activeHandIndex < updatedHands.length - 1) {
+          setActiveHandIndex((i) => i + 1);
+        } else {
+          setGameState(SimState.DealerTurn);
+          playDealer();
+        }
       }
+    } else {
+      // Double path already updated hands and deck
+      if (nextHand) {
+        const updatedHands = playerHands.map((h, idx) =>
+          idx === activeHandIndex ? newHand : h
+        );
+        const allHandsDone = updatedHands.every((h) => h.isCompleted);
+        const onlySurrenderOrBust = allHandsDone && updatedHands.every((h) => h.hasSurrendered || h.isBusted);
 
-      if (activeHandIndex < updatedHands.length - 1) {
-        setActiveHandIndex((i) => i + 1);
-      } else {
-        setGameState(SimState.DealerTurn);
-        playDealer();
+        if (onlySurrenderOrBust) {
+          const revealedDealer = {
+            ...dealerHand,
+            cards: dealerHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c)),
+          };
+          setDealerHand(revealedDealer);
+          setTimeout(() => resolveRound(revealedDealer, updatedHands), 1500);
+          return;
+        }
+
+        if (activeHandIndex < updatedHands.length - 1) {
+          setActiveHandIndex((i) => i + 1);
+        } else {
+          setGameState(SimState.DealerTurn);
+          playDealer();
+        }
       }
     }
   };
@@ -264,21 +306,19 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     setEvenMoneyTaken(even);
     setInsuranceOffered(false);
 
-    // Peek dealer for blackjack
-    const revealedDealerHand = {
-      ...dealerHand,
-      cards: dealerHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c)),
-    };
-    setDealerHand(revealedDealerHand);
-    const dHasBJ = calculateHandValue(revealedDealerHand.cards) === 21 && revealedDealerHand.cards.length === 2;
+    // Peek dealer for blackjack (without revealing in UI)
+    const peekCards = dealerHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c));
+    const dHasBJ = calculateHandValue(peekCards) === 21 && peekCards.length === 2;
 
     if (dHasBJ || even) {
-      // Resolve immediately (dealer blackjack or even-money chosen)
+      // Reveal dealer cards and resolve immediately (dealer blackjack or even-money chosen)
+      const revealedDealerHand = { ...dealerHand, cards: peekCards };
+      setDealerHand(revealedDealerHand);
       setTimeout(() => resolveRound(revealedDealerHand, [...playerHands]), 500);
       return;
     }
 
-    // No dealer blackjack: insurance loses if any, continue to player turn
+    // No dealer blackjack: insurance loses if any, keep dealer card hidden, continue to player turn
     setGameState(SimState.PlayerTurn);
   };
 
@@ -400,13 +440,9 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
 
     setBankroll((b) => {
       const totalBet = hands.reduce((sum, h) => sum + h.bet, 0);
-      const inferredStart = b + totalBet;
-      // If persisted roundStartBankroll looks inconsistent (e.g., from a stale restore),
-      // fall back to the inferred value from current bankroll + totalBet.
-      const start = roundStartBankroll;
-      const startSafe = start !== null && Math.abs(start - inferredStart) < 0.01 ? start : inferredStart;
+      const startSafe = b + totalBet; // infer from bankroll after bets + total bet paid
       const newBank = b + payout;
-      console.log('Bankroll settle -> b:', b, 'payout:', payout, 'totalBet:', totalBet, 'startUsed:', startSafe, 'startPersisted:', start, 'inferredStart:', inferredStart, 'newBank:', newBank);
+      console.log('Bankroll settle -> b:', b, 'payout:', payout, 'totalBet:', totalBet, 'startUsed:', startSafe, 'startPersisted:', roundStartBankroll, 'inferredStart:', startSafe, 'newBank:', newBank);
       console.log('======================');
       const delta = newBank - startSafe;
       const peak = peakBankroll ?? newBank;
