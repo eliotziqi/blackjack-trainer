@@ -177,7 +177,9 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
 
       if (game.gameState === SimState.Setup && key === 'F') {
         e.preventDefault();
-        game.startGame();
+        if (game.bankroll > 0 && game.bankroll >= minSimBet) {
+          game.startGame();
+        }
         return;
       }
 
@@ -293,7 +295,8 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
 
         <button
           onClick={game.startGame}
-          className="relative w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-lg shadow-lg transition text-lg pr-12"
+          disabled={game.bankroll <= 0 || game.bankroll < minSimBet}
+          className="relative w-full bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:hover:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-4 rounded-lg shadow-lg transition text-lg pr-12"
         >
           <span className="block text-center">Start Table</span>
           <span className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center text-[11px] font-semibold rounded-md border bg-white/10 border-white/40">

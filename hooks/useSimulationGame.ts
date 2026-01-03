@@ -141,14 +141,24 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     if (dealerUp10Value && !dealerUpAce) {
       const peekCards = dHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c));
       const dHasBJ = calculateHandValue(peekCards) === 21 && peekCards.length === 2;
-      if (dHasBJ) {
-        // Reveal and resolve immediately
+      
+      // 如果玩家有 Blackjack，无论庄家是否也有，都立即结算（reveal 庄家的牌）
+      if (pBJ) {
         const revealedDealerHand = { ...dHand, cards: peekCards };
         setDealerHand(revealedDealerHand);
         setTimeout(() => resolveRound(revealedDealerHand, [pHand]), 1000);
         return;
       }
-      // No blackjack, keep hidden and continue to player turn
+      
+      // 如果只有庄家有 Blackjack，立即结算（reveal 庄家的牌）
+      if (dHasBJ) {
+        const revealedDealerHand = { ...dHand, cards: peekCards };
+        setDealerHand(revealedDealerHand);
+        setTimeout(() => resolveRound(revealedDealerHand, [pHand]), 1000);
+        return;
+      }
+      
+      // 都没有 Blackjack，继续到玩家操作（保持庄家暗牌）
       setGameState(SimState.PlayerTurn);
       return;
     }
@@ -162,16 +172,30 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       return;
     }
 
-    if (pBJ || dBJ) {
+    // 如果只有玩家有 Blackjack（庄家非 10 值），立即结算
+    if (pBJ) {
       const revealedDealerHand = {
         ...dHand,
         cards: dHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c)),
       };
       setDealerHand(revealedDealerHand);
       setTimeout(() => resolveRound(revealedDealerHand, [pHand]), 1000);
-    } else {
-      setGameState(SimState.PlayerTurn);
+      return;
     }
+
+    // 只有庄家有 Blackjack（玩家没有且庄家非 10 值），立即结算
+    if (dBJ) {
+      const revealedDealerHand = {
+        ...dHand,
+        cards: dHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c)),
+      };
+      setDealerHand(revealedDealerHand);
+      setTimeout(() => resolveRound(revealedDealerHand, [pHand]), 1000);
+      return;
+    }
+
+    // 都没有 Blackjack，进入玩家操作阶段
+    setGameState(SimState.PlayerTurn);
   };
 
   const handleAction = (action: Action) => {
