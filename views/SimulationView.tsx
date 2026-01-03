@@ -44,7 +44,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
   }, []);
 
   // Hint system
-  const { hintAction, hasUsedHints } = useHintSystem(
+  const { hintAction, hintEVs, hasUsedHints, setHasUsedHints } = useHintSystem(
     game.gameState,
     hintsEnabled,
     game.playerHands,
@@ -155,6 +155,8 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
     game.resetGame();
     clearPersistence();
     setRoundsPlayed(0);
+    setHintsEnabled(false); // Reset hints to default OFF
+    setHasUsedHints(false); // Reset hasUsedHints flag
   };
 
   // Keyboard shortcuts
@@ -399,6 +401,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
         activeHandIndex={game.activeHandIndex}
         dealerHand={game.dealerHand}
         hintAction={hintAction}
+        hintEVs={hintEVs}
         hintsEnabled={hintsEnabled}
         canPlay={game.canPlay}
         formatHandValue={formatHandValue}

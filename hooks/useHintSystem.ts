@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Action, Hand } from '../types';
+import { Action, Hand, SimState } from '../types';
 import { GameRules } from '../types';
-import { getBasicStrategyAction } from '../services/strategyEngine';
+import { calculateHandValue } from '../services/blackjackLogic';
+import { calculateAllActionEVs, EVResult } from '../services/evCalculator';
 
 export const useHintSystem = (
-  gameState: number,
+  gameState: number | string,
   hintsEnabled: boolean,
   playerHands: Hand[],
   activeHandIndex: number,
@@ -13,42 +14,61 @@ export const useHintSystem = (
   getAllowedActions: () => Action[]
 ) => {
   const [hintAction, setHintAction] = useState<Action | null>(null);
+  const [hintEVs, setHintEVs] = useState<EVResult[]>([]);
   const [hasUsedHints, setHasUsedHints] = useState(false);
 
   useEffect(() => {
-    if (gameState === 3 && hintsEnabled) {
+    if (gameState === SimState.PlayerTurn && hintsEnabled) {
       // 3 = SimState.PlayerTurn
       const currentHand = playerHands[activeHandIndex];
       const dealerUp = dealerHand.cards[0];
       if (!currentHand || !dealerUp) {
         setHintAction(null);
+        setHintEVs([]);
         return;
       }
-      const action = getBasicStrategyAction(currentHand, dealerUp, rules);
-      const allowedActions = getAllowedActions();
 
-      // 只有当建议的动作在允许的动作列表中时才显示提示
-      // 这样可以避免在玩家已经hit后还建议double的情况
-      if (allowedActions.includes(action)) {
-        setHintAction(action);
-      } else {
-        // 如果建议的动作不允许，回退到基本动作（Hit或Stand）
-        if (allowedActions.includes(Action.Stand)) {
-          setHintAction(Action.Stand);
-        } else if (allowedActions.includes(Action.Hit)) {
-          setHintAction(Action.Hit);
+      // Calculate all action EVs
+      const playerTotal = calculateHandValue(currentHand.cards);
+      const isSoft = currentHand.cards.some(c => c.rank === 'A') && playerTotal < 21;
+      const isPair = currentHand.cards.length === 2 && currentHand.cards[0].rank === currentHand.cards[1].rank;
+      const pairRank = isPair ? currentHand.cards[0].rank : null;
+      const dealerUpVal = dealerUp.value === 10 ? 10 : (dealerUp.rank === 'A' ? 11 : dealerUp.value);
+
+      try {
+        let allEVs = calculateAllActionEVs(playerTotal, isSoft, isPair, pairRank, dealerUpVal, rules);
+        const allowedActions = getAllowedActions();
+
+        // Filter to only allowed actions
+        const filteredEVs = allEVs.filter(ev => allowedActions.includes(ev.action));
+
+        if (filteredEVs.length > 0) {
+          // Sort by EV (highest first)
+          filteredEVs.sort((a, b) => b.ev - a.ev);
+          setHintEVs(filteredEVs);
+          setHintAction(filteredEVs[0].action); // Best action
+          setHasUsedHints(true);
+          
+          // Log EV values for debugging
+          console.log(`[HINT EV] Player: ${playerTotal} (${isSoft ? 'soft' : 'hard'}) | Dealer: ${dealerUpVal} | EVs:`, filteredEVs.map(e => `${e.action}=${e.ev.toFixed(3)}`).join(', '));
         } else {
-          setHintAction(allowedActions[0] || null);
+          setHintAction(null);
+          setHintEVs([]);
         }
+      } catch (error) {
+        console.error('Error calculating EV:', error);
+        setHintAction(null);
+        setHintEVs([]);
       }
-      setHasUsedHints(true);
     } else {
       setHintAction(null);
+      setHintEVs([]);
     }
-  }, [gameState, activeHandIndex, hintsEnabled, playerHands, dealerHand, rules, getAllowedActions]);
+  }, [gameState, activeHandIndex, hintsEnabled, playerHands, dealerHand, rules]);
 
   return {
     hintAction,
+    hintEVs,
     hasUsedHints,
     setHintAction,
     setHasUsedHints,

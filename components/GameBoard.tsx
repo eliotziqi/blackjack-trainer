@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card as CardType, Hand, Rank, SimState, Action } from '../types';
+import { EVResult } from '../services/evCalculator';
 import Card from './Card';
 
 interface GameBoardProps {
@@ -8,6 +9,7 @@ interface GameBoardProps {
   activeHandIndex: number;
   dealerHand: Hand;
   hintAction: Action | null;
+  hintEVs: EVResult[];
   hintsEnabled: boolean;
   canPlay: boolean;
   formatHandValue: (cards: CardType[]) => string;
@@ -19,6 +21,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   activeHandIndex,
   dealerHand,
   hintAction,
+  hintEVs,
   hintsEnabled,
   canPlay,
   formatHandValue,
@@ -104,12 +107,25 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       )}
 
-      {/* Hint Overlay - Modern Design */}
-      {hintsEnabled && hintAction && canPlay && (
+      {/* Hint Overlay - Show all action EVs */}
+      {hintsEnabled && hintEVs.length > 0 && canPlay && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-          <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-black px-6 py-3 rounded-xl font-bold shadow-2xl animate-pulse border-2 border-yellow-400">
-            <div className="text-xs uppercase tracking-wider opacity-80">Suggested Action</div>
-            <div className="text-xl">{hintAction}</div>
+          <div className="bg-blue-600 text-white px-4 py-3 rounded-lg shadow-2xl border-2 border-blue-400">
+            <div className="text-xs uppercase tracking-wider mb-2 font-bold">Expected Value</div>
+            <div className="space-y-1">
+              {hintEVs.map((ev, idx) => (
+                <div
+                  key={idx}
+                  className={`text-sm font-mono ${
+                    idx === 0
+                      ? 'text-yellow-300 font-bold text-base'
+                      : 'text-gray-200'
+                  }`}
+                >
+                  {ev.action}: {ev.ev >= 0 ? '+' : ''}{ev.ev.toFixed(3)}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
