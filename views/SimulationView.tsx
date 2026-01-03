@@ -182,7 +182,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
       if (game.gameState === SimState.Betting) {
         if (key === 'F') {
           e.preventDefault();
-          game.placeBet(currentBet);
+          game.placeBet(currentBet, roundsPlayed + 1);
           return;
         }
         if (key === 'E') {
@@ -414,7 +414,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
             onAdjustChips={adjustChips}
             onSetPreset={setPreset}
             onClearChips={clearChips}
-            onPlaceBet={() => game.placeBet(currentBet)}
+            onPlaceBet={() => game.placeBet(currentBet, roundsPlayed + 1)}
             onLeaveTable={() => handleLeaveTable(game.bankroll, game.initialBankroll, roundsPlayed, hasUsedHints)}
             canAfford={canAfford}
           />

@@ -93,7 +93,8 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     setDeck(shuffleDeck(createDeck(rules.deckCount)));
   };
 
-  const placeBet = (currentBet: number) => {
+  const placeBet = (currentBet: number, roundNumber: number = 1) => {
+    console.log(`\n========== ROUND ${roundNumber} START ==========`);
     if (bankroll < currentBet) return;
     const preBetBankroll = bankroll;
     const allIn = preBetBankroll > 0 && currentBet >= preBetBankroll && preBetBankroll >= allInThreshold;
@@ -152,6 +153,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     }
 
     if (dealerUpAce) {
+      console.log(`[DEALER ACE] Insurance offered (rules: insurance=${rules.insuranceAllowed}, evenMoney=${rules.evenMoneyAllowed})`);
       setInsuranceOffered(true);
       setInsuranceBet(0);
       setEvenMoneyTaken(false);
@@ -179,24 +181,31 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     let updatedHands = [...playerHands];
     let isDoubleAction = false;
 
+    console.log(`[ACTION] Hand ${activeHandIndex + 1}: ${action} | Cards: ${currentHand.cards.map(c => c.rank + c.suit).join(',')} (${calculateHandValue(currentHand.cards)}) | Bet: $${currentHand.bet.toFixed(2)}`);
+
     if (action === Action.Hit) {
       const card = d.pop()!;
       newHand = { ...currentHand, cards: [...currentHand.cards, card] };
-      if (calculateHandValue(newHand.cards) > 21) {
+      const newValue = calculateHandValue(newHand.cards);
+      console.log(`  -> Drew: ${card.rank}${card.suit} | New value: ${newValue}`);
+      if (newValue > 21) {
         newHand.isBusted = true;
         newHand.isCompleted = true;
         nextHand = true;
+        console.log(`  -> BUSTED at ${newValue}`);
       }
     } else if (action === Action.Stand) {
       newHand = { ...currentHand, isCompleted: true };
       nextHand = true;
+      console.log(`  -> Standing at ${calculateHandValue(currentHand.cards)}`);
     } else if (action === Action.Double) {
       if (bankroll < currentHand.bet) return;
       setBankroll((b) => b - currentHand.bet);
       const card = d.pop()!;
       const doubledBet = currentHand.bet * 2;
       const cards = [...currentHand.cards, card];
-      const isBusted = calculateHandValue(cards) > 21;
+      const newValue = calculateHandValue(cards);
+      const isBusted = newValue > 21;
 
       newHand = {
         ...currentHand,
@@ -207,6 +216,12 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
         isBusted,
       };
 
+      console.log(`  -> Doubled bet from $${currentHand.bet.toFixed(2)} to $${doubledBet.toFixed(2)}`);
+      console.log(`  -> Drew: ${card.rank}${card.suit} | New value: ${newValue}`);
+      if (isBusted) {
+        console.log(`  -> BUSTED at ${newValue}`);
+      }
+
       if (roundFlagsRef.current.splitUsed) {
         roundFlagsRef.current.das = true;
       }
@@ -216,6 +231,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     } else if (action === Action.Surrender) {
       newHand = { ...currentHand, isCompleted: true, hasSurrendered: true };
       nextHand = true;
+      console.log(`  -> Surrendered, returns $${(currentHand.bet * 0.5).toFixed(2)} (50% of bet)`);
     } else if (action === Action.Split) {
       if (bankroll < currentHand.bet) return;
       setBankroll((b) => b - currentHand.bet);
@@ -229,6 +245,9 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
 
       const hand2 = createHand(currentHand.bet);
       hand2.cards = [card2, d.pop()!];
+
+      console.log(`  -> Split pair: [${card1.rank}${card1.suit} + ${hand1.cards[1].rank}${hand1.cards[1].suit}] | [${card2.rank}${card2.suit} + ${hand2.cards[1].rank}${hand2.cards[1].suit}]`);
+      console.log(`  -> Each hand bet: $${currentHand.bet.toFixed(2)}, total: $${(currentHand.bet * 2).toFixed(2)}`);
 
       updatedHands.splice(activeHandIndex, 1, hand1, hand2);
       setPlayerHands(updatedHands);
@@ -260,7 +279,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
         setActiveHandIndex((i) => i + 1);
       } else {
         setGameState(SimState.DealerTurn);
-        playDealer();
+        playDealer(updatedHands);
       }
     }
   };
@@ -275,14 +294,16 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     if (choice === 'insure') {
       placed = maxInsurance > 0 ? Math.round(maxInsurance * 100) / 100 : 0;
       if (placed > 0) setBankroll((b) => Math.round((b - placed) * 100) / 100);
-    }
-
-    if (choice === 'even') {
+      console.log(`[INSURANCE] Bought: $${placed.toFixed(2)} (max: $${maxInsurance.toFixed(2)})`);
+    } else if (choice === 'even') {
       const pVal = calculateHandValue(playerHands[0]?.cards ?? []);
       const isBJ = pVal === 21 && (playerHands[0]?.cards.length ?? 0) === 2;
       if (!isBJ) return;
       even = true;
       placed = 0;
+      console.log(`[INSURANCE] Even Money taken (1:1 payout locked)`);
+    } else {
+      console.log(`[INSURANCE] Declined`);
     }
 
     setInsuranceBet(placed);
@@ -305,7 +326,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     setGameState(SimState.PlayerTurn);
   };
 
-  const playDealer = () => {
+  const playDealer = (handsToUse?: Hand[]) => {
     // First, reveal the dealer's hidden card in UI
     const revealedDealerHand = {
       ...dealerHand,
@@ -317,7 +338,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       const { updatedDeck, finalHand } = playDealerTurn(deck, revealedDealerHand, rules);
       setDeck(updatedDeck);
       setDealerHand(finalHand);
-      setTimeout(() => resolveRound(finalHand, undefined), 1000);
+      setTimeout(() => resolveRound(finalHand, handsToUse), 1000);
     }, 500);
   };
 
@@ -334,10 +355,8 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     const dBusted = dVal > 21;
     const dHasBJ = dVal === 21 && dHand.cards.length === 2;
 
-    console.log('=== Round Resolution ===');
-    console.log('Dealer cards:', dHand.cards.map(c => `${c.rank}${c.suit}`));
-    console.log('Dealer:', dVal, 'Busted:', dBusted, 'Blackjack:', dHasBJ);
-    console.log('Player hands:', hands.length);
+    console.log('\n=== ROUND RESOLUTION ===');
+    console.log(`Dealer: ${dHand.cards.map(c => c.rank + c.suit).join(',')} | Value: ${dVal} | ${dBusted ? 'BUSTED' : dHasBJ ? 'BLACKJACK' : 'STAND'}`);
 
     hands.forEach((h, idx) => {
       const pVal = calculateHandValue(h.cards);
@@ -346,18 +365,18 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
         roundFlagsRef.current.hadBlackjack = true;
       }
 
-      console.log(`Hand ${idx + 1}: Cards=[${h.cards.map(c => `${c.rank}${c.suit}`).join(',')}], Value=${pVal}, Bet=${h.bet}, Busted=${h.isBusted}, BJ=${pHasBJ}, Surrendered=${h.hasSurrendered}`);
+      console.log(`\nPlayer Hand ${idx + 1}: ${h.cards.map(c => c.rank + c.suit).join(',')} | Value: ${pVal} | Bet: $${h.bet.toFixed(2)}`);
 
       // Surrender: 返回一半本金
       if (h.hasSurrendered) {
         payout += h.bet * 0.5;
-        console.log(`  → Surrendered, payout +${h.bet * 0.5}`);
+        console.log(`  -> SURRENDERED | Return: $${(h.bet * 0.5).toFixed(2)}`);
         return;
       }
 
       // Player bust: 输掉全部，不返还任何钱
       if (h.isBusted) {
-        console.log(`  → Player busted, payout +0`);
+        console.log(`  -> BUSTED at ${pVal} | Loss: -$${h.bet.toFixed(2)}`);
         return;
       }
 
@@ -365,10 +384,10 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       if (pHasBJ && dHasBJ) {
         if (evenMoneyTaken) {
           payout += h.bet * 2;
-          console.log(`  → Even money (dealer BJ), payout +${h.bet * 2}`);
+          console.log(`  -> BLACKJACK vs BJ (even money) | Return: $${(h.bet * 2).toFixed(2)}`);
         } else {
           payout += h.bet;
-          console.log(`  → Both BJ (push), payout +${h.bet}`);
+          console.log(`  -> BLACKJACK vs BJ (push) | Return: $${h.bet.toFixed(2)}`);
         }
         return;
       }
@@ -376,58 +395,62 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       // Player Blackjack vs No Dealer Blackjack: 按照规则赔付(3:2或6:5) + 本金
       if (pHasBJ && !dHasBJ) {
         if (evenMoneyTaken) {
-          const win = h.bet * 2; // 1:1 payout total return
+          const win = h.bet * 2;
           payout += win;
-          console.log(`  → Even money taken, payout +${win}`);
+          console.log(`  -> BLACKJACK (even money) | Win: $${win.toFixed(2)}`);
           return;
         }
         const win = h.bet * (1 + rules.blackjackPayout);
         payout += win;
-        console.log(`  → Player BJ wins, payout +${win}`);
+        console.log(`  -> BLACKJACK WIN | Payout: $${win.toFixed(2)} (${(rules.blackjackPayout * 100).toFixed(0)}%)`);
         return;
       }
 
       // Dealer bust: Player wins，返还本金 + 奖金
       if (dBusted) {
         payout += h.bet * 2;
-        console.log(`  → Dealer busted, player wins, payout +${h.bet * 2}`);
+        console.log(`  -> DEALER BUSTED at ${dVal} | Win: $${(h.bet * 2).toFixed(2)}`);
         return;
       }
 
       // 比点数
       if (pVal > dVal) {
-        // Player wins: 返还本金 + 奖金
         payout += h.bet * 2;
-        console.log(`  → Player wins (${pVal} > ${dVal}), payout +${h.bet * 2}`);
+        console.log(`  -> WIN | ${pVal} > ${dVal} | Win: $${(h.bet * 2).toFixed(2)}`);
       } else if (pVal === dVal) {
-        // Push: 只返还本金
         payout += h.bet;
-        console.log(`  → Push (${pVal} = ${dVal}), payout +${h.bet}`);
+        console.log(`  -> PUSH | Both ${pVal} | Return: $${h.bet.toFixed(2)}`);
       } else {
-        console.log(`  → Player loses (${pVal} < ${dVal}), payout +0`);
+        console.log(`  -> LOSS | ${pVal} < ${dVal} | Loss: -$${h.bet.toFixed(2)}`);
       }
-      // pVal < dVal: Player loses，不返还任何钱
     });
 
     // Insurance settle after knowing dealer blackjack outcome
     if (insuranceBet > 0) {
       if (dHasBJ) {
-        payout += insuranceBet * 3; // 2:1 win plus return stake
-        console.log(`Insurance wins, payout +${insuranceBet * 3}`);
+        payout += insuranceBet * 3;
+        console.log(`\nINSURANCE WON | Bet: $${insuranceBet.toFixed(2)} | Win: $${(insuranceBet * 3).toFixed(2)}`);
       } else {
-        console.log('Insurance loses, payout +0');
+        console.log(`\nINSURANCE LOST | Bet: $${insuranceBet.toFixed(2)} | Loss: -$${insuranceBet.toFixed(2)}`);
       }
     }
 
-    console.log('Total payout:', payout);
+    console.log(`\nROUND TOTAL PAYOUT: $${payout.toFixed(2)}`);
 
     setBankroll((b) => {
       const totalBet = hands.reduce((sum, h) => sum + h.bet, 0);
       const newBank = b + payout;
       const inferredStart = b + totalBet;
-      console.log('Bankroll settle -> b:', b, 'payout:', payout, 'totalBet:', totalBet, 'startUsed:', inferredStart, 'startPersisted:', roundStartBankroll, 'inferredStart:', inferredStart, 'newBank:', newBank);
-      console.log('======================');
       const delta = newBank - inferredStart;
+      
+      console.log('\nBankroll Settlement:');
+      console.log(`  Before payout: $${b.toFixed(2)}`);
+      console.log(`  Total bet: $${totalBet.toFixed(2)}`);
+      console.log(`  Round payout: $${payout.toFixed(2)}`);
+      console.log(`  After payout: $${newBank.toFixed(2)}`);
+      console.log(`  Net delta: ${delta >= 0 ? '+' : ''}$${delta.toFixed(2)}`);
+      console.log('=====================================\n');
+      
       const peak = peakBankroll ?? newBank;
       const drawdown = peak > 0 ? Math.max(0, (peak - newBank) / peak) : 0;
       const achievements: string[] = [];
