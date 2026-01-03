@@ -104,35 +104,6 @@ This rule affects the dealer's final hand and your optimal strategy decisions.`
         </RuleItemWithInfo>
 
         <RuleItemWithInfo
-          label="Insurance"
-          description="Allow insurance when dealer shows Ace; costs up to half of main bet, pays 2:1 if dealer has blackjack"
-          onInfoClick={() => showExplanation(
-            'Insurance',
-            `When dealer shows an Ace, you may place an insurance bet up to half your main bet. If dealer has blackjack, insurance pays 2:1; otherwise it loses immediately.`
-          )}
-        >
-          <RuleToggle
-            value={!!rules.insuranceAllowed}
-            onChange={(v) => setRules({ ...rules, insuranceAllowed: v })}
-          />
-        </RuleItemWithInfo>
-
-        <RuleItemWithInfo
-          label="Even Money"
-          description="If you have a blackjack vs dealer Ace, you may lock a 1:1 payout immediately (effectively insurance on your blackjack)"
-          onInfoClick={() => showExplanation(
-            'Even Money',
-            `When you have a natural blackjack and dealer shows an Ace, Even Money lets you take an immediate 1:1 payout instead of 3:2, avoiding a push if dealer also has blackjack.`
-          )}
-        >
-          <RuleToggle
-            value={!!rules.evenMoneyAllowed}
-            onChange={(v) => setRules({ ...rules, evenMoneyAllowed: v })}
-            disabled={!rules.insuranceAllowed}
-          />
-        </RuleItemWithInfo>
-
-        <RuleItemWithInfo
           label="Double After Split"
           description="Whether you can double down on a hand after splitting a pair"
           onInfoClick={() => showExplanation(
@@ -262,6 +233,36 @@ More decks mean the house has a greater advantage. The basic strategy may need s
                 <option key={v} value={v}>${v}</option>
               ))}
             </select>
+          </RuleItemWithInfo>
+
+          <RuleItemWithInfo
+            label="Insurance"
+            description="Allow insurance when dealer shows Ace; costs up to half of main bet, pays 2:1 if dealer has blackjack"
+            onInfoClick={() => showExplanation(
+              'Insurance',
+              `When dealer shows an Ace, you may place an insurance bet up to half your main bet. If dealer has blackjack, insurance pays 2:1; otherwise it loses immediately.`
+            )}
+          >
+            <RuleToggle
+              value={!!rules.insuranceAllowed}
+              onChange={(v) => setRules({ ...rules, insuranceAllowed: v })}
+              disabled={simLocked}
+            />
+          </RuleItemWithInfo>
+
+          <RuleItemWithInfo
+            label="Even Money"
+            description="If you have a blackjack vs dealer Ace, you may lock a 1:1 payout immediately (effectively insurance on your blackjack)"
+            onInfoClick={() => showExplanation(
+              'Even Money',
+              `When you have a natural blackjack and dealer shows an Ace, Even Money lets you take an immediate 1:1 payout instead of 3:2, avoiding a push if dealer also has blackjack.`
+            )}
+          >
+            <RuleToggle
+              value={!!rules.evenMoneyAllowed}
+              onChange={(v) => setRules({ ...rules, evenMoneyAllowed: v })}
+              disabled={simLocked || !rules.insuranceAllowed}
+            />
           </RuleItemWithInfo>
       </div>
 
