@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+﻿import { useState, useRef } from 'react';
 import { GameRules, Action, Hand, Card as CardType, SimState, Rank } from '../types';
 import {
   createDeck,
@@ -54,22 +54,22 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
   const activeHand = playerHands[activeHandIndex];
   const canPlay = gameState === SimState.PlayerTurn;
 
-  // 动态计算允许的操作（根据当前活动手牌）
+  // 鍔ㄦ€佽绠楀厑璁哥殑鎿嶄綔锛堟牴鎹綋鍓嶆椿鍔ㄦ墜鐗岋級
   const getAllowedActions = (): Action[] => {
     if (!activeHand) return [];
 
-    // Blackjack 只能 Stand
+    // Blackjack 鍙兘 Stand
     const isBlackjack = activeHand.cards.length === 2 && calculateHandValue(activeHand.cards) === 21;
     if (isBlackjack) return [Action.Stand];
 
     const actions: Action[] = [Action.Hit, Action.Stand];
 
-    // Double: 只在前两张牌时允许，且需要足够资金
+    // Double: 鍙湪鍓嶄袱寮犵墝鏃跺厑璁革紝涓旈渶瑕佽冻澶熻祫閲?
     if (activeHand.cards.length === 2 && bankroll >= activeHand.bet) {
       actions.push(Action.Double);
     }
 
-    // Split: 只在前两张牌且相同rank时允许，且需要足够资金
+    // Split: 鍙湪鍓嶄袱寮犵墝涓旂浉鍚宺ank鏃跺厑璁革紝涓旈渶瑕佽冻澶熻祫閲?
     const canSplit =
       activeHand.cards.length === 2 &&
       activeHand.cards[0].rank === activeHand.cards[1].rank &&
@@ -78,7 +78,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       actions.push(Action.Split);
     }
 
-    // Surrender: 只在前两张牌时允许，且规则允许；拆牌后不允许再投降
+    // Surrender: 鍙湪鍓嶄袱寮犵墝鏃跺厑璁革紝涓旇鍒欏厑璁革紱鎷嗙墝鍚庝笉鍏佽鍐嶆姇闄?
     if (activeHand.cards.length === 2 && rules.surrender !== 'none' && !roundFlagsRef.current.splitUsed) {
       actions.push(Action.Surrender);
     }
@@ -134,23 +134,6 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     const pBJ = calculateHandValue([p1, p2]) === 21;
     const dBJ = calculateHandValue([d1, d2]) === 21;
 
-    // Dealer 10-value card: peek for blackjack immediately
-    const dealerUp10Value = dHand.cards[0]?.value === 10;
-    if (dealerUp10Value && !dealerUpAce) {
-      const peekCards = dHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c));
-      const dHasBJ = calculateHandValue(peekCards) === 21 && peekCards.length === 2;
-      if (dHasBJ) {
-        // Reveal and resolve immediately
-        const revealedDealerHand = { ...dHand, cards: peekCards };
-        setDealerHand(revealedDealerHand);
-        setTimeout(() => resolveRound(revealedDealerHand, [pHand]), 1000);
-        return;
-      }
-      // No blackjack, keep hidden and continue to player turn
-      setGameState(SimState.PlayerTurn);
-      return;
-    }
-
     if (dealerUpAce) {
       setInsuranceOffered(true);
       setInsuranceBet(0);
@@ -176,8 +159,6 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     let d = [...deck];
     let nextHand = false;
     let newHand = { ...currentHand };
-    let updatedHands = [...playerHands];
-    let isDoubleAction = false;
 
     if (action === Action.Hit) {
       const card = d.pop()!;
@@ -198,21 +179,28 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       const cards = [...currentHand.cards, card];
       const isBusted = calculateHandValue(cards) > 21;
 
-      newHand = {
-        ...currentHand,
-        cards,
-        bet: doubledBet,
-        isCompleted: true,
-        hasDoubled: true,
-        isBusted,
-      };
+      const updatedHands = playerHands.map((h, idx) =>
+        idx === activeHandIndex
+          ? {
+              ...h,
+              cards,
+              bet: doubledBet,
+              isCompleted: true,
+              hasDoubled: true,
+              isBusted,
+            }
+          : h
+      );
 
       if (roundFlagsRef.current.splitUsed) {
         roundFlagsRef.current.das = true;
       }
 
+      setPlayerHands(updatedHands);
+      setDeck(d);
       nextHand = true;
-      isDoubleAction = true;
+      // Exit early so we don't overwrite updatedHands below
+      newHand = updatedHands[activeHandIndex];
     } else if (action === Action.Surrender) {
       newHand = { ...currentHand, isCompleted: true, hasSurrendered: true };
       nextHand = true;
@@ -237,30 +225,59 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       return;
     }
 
-    updatedHands[activeHandIndex] = newHand;
-    setPlayerHands(updatedHands);
-    setDeck(d);
+    if (action !== Action.Double) {
+      const updatedHands = [...playerHands];
+      updatedHands[activeHandIndex] = newHand;
+      setPlayerHands(updatedHands);
+      setDeck(d);
 
-    if (nextHand) {
-      const allHandsDone = updatedHands.every((h) => h.isCompleted);
-      const onlySurrenderOrBust = allHandsDone && updatedHands.every((h) => h.hasSurrendered || h.isBusted);
+      if (nextHand) {
+        const allHandsDone = updatedHands.every((h) => h.isCompleted);
+        const onlySurrenderOrBust = allHandsDone && updatedHands.every((h) => h.hasSurrendered || h.isBusted);
 
-      if (onlySurrenderOrBust) {
-        // 如果所有手牌都是投降或爆牌，仍要展示庄家的隐藏牌，给用户反应时间
-        const revealedDealer = {
-          ...dealerHand,
-          cards: dealerHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c)),
-        };
-        setDealerHand(revealedDealer);
-        setTimeout(() => resolveRound(revealedDealer, updatedHands), 1500);
-        return;
+        if (onlySurrenderOrBust) {
+          // 濡傛灉鎵€鏈夋墜鐗岄兘鏄姇闄嶆垨鐖嗙墝锛屼粛瑕佸睍绀哄簞瀹剁殑闅愯棌鐗岋紝缁欑敤鎴峰弽搴旀椂闂?
+          const revealedDealer = {
+            ...dealerHand,
+            cards: dealerHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c)),
+          };
+          setDealerHand(revealedDealer);
+          setTimeout(() => resolveRound(revealedDealer, updatedHands), 1500);
+          return;
+        }
+
+        if (activeHandIndex < updatedHands.length - 1) {
+          setActiveHandIndex((i) => i + 1);
+        } else {
+          setGameState(SimState.DealerTurn);
+          playDealer();
+        }
       }
+    } else {
+      // Double path already updated hands and deck
+      if (nextHand) {
+        const updatedHands = playerHands.map((h, idx) =>
+          idx === activeHandIndex ? newHand : h
+        );
+        const allHandsDone = updatedHands.every((h) => h.isCompleted);
+        const onlySurrenderOrBust = allHandsDone && updatedHands.every((h) => h.hasSurrendered || h.isBusted);
 
-      if (activeHandIndex < updatedHands.length - 1) {
-        setActiveHandIndex((i) => i + 1);
-      } else {
-        setGameState(SimState.DealerTurn);
-        playDealer();
+        if (onlySurrenderOrBust) {
+          const revealedDealer = {
+            ...dealerHand,
+            cards: dealerHand.cards.map((c, idx) => (idx === 1 ? { ...c, isHidden: false } : c)),
+          };
+          setDealerHand(revealedDealer);
+          setTimeout(() => resolveRound(revealedDealer, updatedHands), 1500);
+          return;
+        }
+
+        if (activeHandIndex < updatedHands.length - 1) {
+          setActiveHandIndex((i) => i + 1);
+        } else {
+          setGameState(SimState.DealerTurn);
+          playDealer();
+        }
       }
     }
   };
@@ -324,7 +341,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
   const resolveRound = (finalDealerHand?: Hand, handsOverride?: Hand[]) => {
     setGameState(SimState.Resolving);
 
-    // 使用传入的finalDealerHand，如果没有则用状态中的（用于instant blackjack情况）
+    // 浣跨敤浼犲叆鐨刦inalDealerHand锛屽鏋滄病鏈夊垯鐢ㄧ姸鎬佷腑鐨勶紙鐢ㄤ簬instant blackjack鎯呭喌锛?
     const dHand = finalDealerHand || dealerHand;
     const hands = handsOverride || playerHands;
 
@@ -348,65 +365,65 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
 
       console.log(`Hand ${idx + 1}: Cards=[${h.cards.map(c => `${c.rank}${c.suit}`).join(',')}], Value=${pVal}, Bet=${h.bet}, Busted=${h.isBusted}, BJ=${pHasBJ}, Surrendered=${h.hasSurrendered}`);
 
-      // Surrender: 返回一半本金
+      // Surrender: 杩斿洖涓€鍗婃湰閲?
       if (h.hasSurrendered) {
         payout += h.bet * 0.5;
-        console.log(`  → Surrendered, payout +${h.bet * 0.5}`);
+        console.log(`  鈫?Surrendered, payout +${h.bet * 0.5}`);
         return;
       }
 
-      // Player bust: 输掉全部，不返还任何钱
+      // Player bust: 杈撴帀鍏ㄩ儴锛屼笉杩旇繕浠讳綍閽?
       if (h.isBusted) {
-        console.log(`  → Player busted, payout +0`);
+        console.log(`  鈫?Player busted, payout +0`);
         return;
       }
 
-      // Player Blackjack vs Dealer Blackjack: Push，返还本金
+      // Player Blackjack vs Dealer Blackjack: Push锛岃繑杩樻湰閲?
       if (pHasBJ && dHasBJ) {
         if (evenMoneyTaken) {
           payout += h.bet * 2;
-          console.log(`  → Even money (dealer BJ), payout +${h.bet * 2}`);
+          console.log(`  鈫?Even money (dealer BJ), payout +${h.bet * 2}`);
         } else {
           payout += h.bet;
-          console.log(`  → Both BJ (push), payout +${h.bet}`);
+          console.log(`  鈫?Both BJ (push), payout +${h.bet}`);
         }
         return;
       }
 
-      // Player Blackjack vs No Dealer Blackjack: 按照规则赔付(3:2或6:5) + 本金
+      // Player Blackjack vs No Dealer Blackjack: 鎸夌収瑙勫垯璧斾粯(3:2鎴?:5) + 鏈噾
       if (pHasBJ && !dHasBJ) {
         if (evenMoneyTaken) {
           const win = h.bet * 2; // 1:1 payout total return
           payout += win;
-          console.log(`  → Even money taken, payout +${win}`);
+          console.log(`  鈫?Even money taken, payout +${win}`);
           return;
         }
         const win = h.bet * (1 + rules.blackjackPayout);
         payout += win;
-        console.log(`  → Player BJ wins, payout +${win}`);
+        console.log(`  鈫?Player BJ wins, payout +${win}`);
         return;
       }
 
-      // Dealer bust: Player wins，返还本金 + 奖金
+      // Dealer bust: Player wins锛岃繑杩樻湰閲?+ 濂栭噾
       if (dBusted) {
         payout += h.bet * 2;
-        console.log(`  → Dealer busted, player wins, payout +${h.bet * 2}`);
+        console.log(`  鈫?Dealer busted, player wins, payout +${h.bet * 2}`);
         return;
       }
 
-      // 比点数
+      // 姣旂偣鏁?
       if (pVal > dVal) {
-        // Player wins: 返还本金 + 奖金
+        // Player wins: 杩旇繕鏈噾 + 濂栭噾
         payout += h.bet * 2;
-        console.log(`  → Player wins (${pVal} > ${dVal}), payout +${h.bet * 2}`);
+        console.log(`  鈫?Player wins (${pVal} > ${dVal}), payout +${h.bet * 2}`);
       } else if (pVal === dVal) {
-        // Push: 只返还本金
+        // Push: 鍙繑杩樻湰閲?
         payout += h.bet;
-        console.log(`  → Push (${pVal} = ${dVal}), payout +${h.bet}`);
+        console.log(`  鈫?Push (${pVal} = ${dVal}), payout +${h.bet}`);
       } else {
-        console.log(`  → Player loses (${pVal} < ${dVal}), payout +0`);
+        console.log(`  鈫?Player loses (${pVal} < ${dVal}), payout +0`);
       }
-      // pVal < dVal: Player loses，不返还任何钱
+      // pVal < dVal: Player loses锛屼笉杩旇繕浠讳綍閽?
     });
 
     // Insurance settle after knowing dealer blackjack outcome
@@ -423,11 +440,11 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
 
     setBankroll((b) => {
       const totalBet = hands.reduce((sum, h) => sum + h.bet, 0);
+      const startSafe = b + totalBet; // infer from bankroll after bets + total bet paid
       const newBank = b + payout;
-      const inferredStart = b + totalBet;
-      console.log('Bankroll settle -> b:', b, 'payout:', payout, 'totalBet:', totalBet, 'startUsed:', inferredStart, 'startPersisted:', roundStartBankroll, 'inferredStart:', inferredStart, 'newBank:', newBank);
+      console.log('Bankroll settle -> b:', b, 'payout:', payout, 'totalBet:', totalBet, 'startUsed:', startSafe, 'startPersisted:', roundStartBankroll, 'inferredStart:', startSafe, 'newBank:', newBank);
       console.log('======================');
-      const delta = newBank - inferredStart;
+      const delta = newBank - startSafe;
       const peak = peakBankroll ?? newBank;
       const drawdown = peak > 0 ? Math.max(0, (peak - newBank) / peak) : 0;
       const achievements: string[] = [];
@@ -524,3 +541,4 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     handleInsuranceDecision,
   };
 };
+
