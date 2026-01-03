@@ -122,8 +122,8 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     setDealerHand(dHand);
 
     // Check for instant blackjack
-    const pBJ = calculateHandValue([p1, p2]) === 21 && p1.rank !== p2.rank;
-    const dBJ = calculateHandValue([d1, d2]) === 21 && d1.rank !== d2.rank;
+    const pBJ = calculateHandValue([p1, p2]) === 21;
+    const dBJ = calculateHandValue([d1, d2]) === 21;
 
     if (pBJ || dBJ) {
       const revealedDealerHand = {
@@ -258,7 +258,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
 
     hands.forEach((h, idx) => {
       const pVal = calculateHandValue(h.cards);
-      const pHasBJ = pVal === 21 && h.cards.length === 2 && h.cards[0].rank !== h.cards[1].rank;
+      const pHasBJ = pVal === 21 && h.cards.length === 2;
       if (pHasBJ) {
         roundFlagsRef.current.hadBlackjack = true;
       }
