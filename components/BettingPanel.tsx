@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { primaryButtonBase, primaryButtonHover, primaryButtonDisabled, secondaryButtonBase, secondaryButtonHover, buttonTransition, buttonPressStyle } from './ui/buttonStyles';
 
 interface ChipDenom {
   value: number;
@@ -138,27 +139,21 @@ const BettingPanel: React.FC<BettingPanelProps> = ({
       <button
         onClick={onPlaceBet}
         disabled={!canPlaceBet}
-        className={`relative w-full max-w-md px-8 py-4 pr-14 rounded-xl font-bold text-lg shadow-xl transition-all duration-200 ${
+        className={`w-full max-w-md px-8 py-4 rounded-xl font-bold text-lg shadow-lg overflow-hidden ${
           !canPlaceBet
-            ? 'bg-gray-700 cursor-not-allowed text-gray-500 border-2 border-gray-600'
-            : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white border-2 border-green-500 hover:shadow-green-500/50'
+            ? primaryButtonDisabled
+            : `${primaryButtonBase} ${primaryButtonHover} ${buttonTransition} ${buttonPressStyle}`
         }`}
       >
-        <span className="block text-center">{!canPlaceBet ? `Min $${minSimBet}` : 'DEAL CARDS'}</span>
-        <span className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center text-[11px] font-semibold rounded-md border bg-white/10 border-white/40">
-          F
-        </span>
+        <span className="block text-center">{!canPlaceBet ? `Min $${minSimBet}` : 'DEAL CARDS'} <span className="text-xs opacity-75">(F)</span></span>
       </button>
 
       {/* Leave Table */}
       <button
         onClick={onLeaveTable}
-        className="relative w-full max-w-md px-8 py-4 pr-14 rounded-xl font-bold text-lg shadow-xl transition-all duration-200 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white border-2 border-red-500 hover:shadow-red-500/50"
+        className={`w-full max-w-md px-8 py-4 rounded-xl font-bold text-lg shadow-lg ${secondaryButtonBase} ${secondaryButtonHover} ${buttonTransition} ${buttonPressStyle}`}
       >
-        <span className="block text-center">Leave Table</span>
-        <span className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center text-[11px] font-semibold rounded-md border bg-white/10 border-white/40">
-          E
-        </span>
+        <span className="block text-center">Leave Table <span className="text-xs opacity-75">(E)</span></span>
       </button>
     </div>
   );

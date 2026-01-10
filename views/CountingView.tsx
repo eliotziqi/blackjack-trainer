@@ -4,6 +4,7 @@ import { useCountingSession } from '../hooks/useCountingSession';
 import { loadCountingStats, getCardValue, getCardBreakdown } from '../services/countingService';
 import Card from '../components/Card';
 import { calculateHandValue } from '../services/blackjackLogic';
+import { primaryButtonBase, primaryButtonHover, primaryButtonDisabled, secondaryButtonBase, secondaryButtonHover, buttonTransition, buttonPressStyle } from '../components/ui/buttonStyles';
 
 interface CountingViewProps {
   globalRules: GameRules;
@@ -342,7 +343,7 @@ const SetupPage: React.FC<SetupPageProps> = ({ session, globalRules }) => {
       <div className="flex gap-3">
         <button
           onClick={startSession}
-          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+          className={`flex-1 ${primaryButtonBase} ${primaryButtonHover} ${buttonTransition} ${buttonPressStyle} py-3 px-6 rounded-lg shadow-sm`}
         >
           Start Counting <span className="text-xs opacity-75">(F)</span>
         </button>
@@ -610,10 +611,10 @@ const LivePage: React.FC<LivePageProps> = ({ session, stats }) => {
               if (isWaiting) return;
               submitCount();
             }}
-            className={`w-full mt-4 font-bold py-3 rounded-lg transition-colors ${
+            className={`w-full mt-4 font-bold py-3 rounded-lg shadow-sm overflow-hidden ${buttonTransition} ${buttonPressStyle} ${
               isWaiting
-                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                : 'bg-green-600 hover:bg-green-700 text-white'
+                ? primaryButtonDisabled
+                : `${primaryButtonBase} ${primaryButtonHover}`
             }`}
           >
             Confirm Count <span className="text-xs opacity-75">(F)</span>
@@ -695,7 +696,7 @@ const LivePage: React.FC<LivePageProps> = ({ session, stats }) => {
             <div className="flex gap-3">
               <button
                 onClick={nextRound}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-colors"
+                className={`flex-1 ${primaryButtonBase} ${primaryButtonHover} ${buttonTransition} ${buttonPressStyle} py-3 rounded-lg shadow-sm`}
               >
                 Next Round <span className="text-xs opacity-75">(F)</span>
               </button>

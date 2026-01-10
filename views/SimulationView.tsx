@@ -8,6 +8,7 @@ import ActionControls from '../components/ActionControls';
 import BettingPanel from '../components/BettingPanel';
 import GameBoard from '../components/GameBoard';
 import SessionSummaryModal from '../components/SessionSummaryModal';
+import { primaryButtonBase, primaryButtonHover, primaryButtonDisabled, buttonTransition, buttonPressStyle } from '../components/ui/buttonStyles';
 
 interface SimulationViewProps {
   globalRules: GameRules;
@@ -297,12 +298,13 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
         <button
           onClick={game.startGame}
           disabled={game.bankroll <= 0 || game.bankroll < minSimBet}
-          className="relative w-full bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:hover:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-4 rounded-lg shadow-lg transition text-lg pr-12"
+          className={`relative w-full py-4 rounded-lg shadow-lg overflow-hidden ${buttonTransition} ${buttonPressStyle} text-lg ${
+            game.bankroll <= 0 || game.bankroll < minSimBet
+              ? primaryButtonDisabled
+              : `${primaryButtonBase} ${primaryButtonHover}`
+          }`}
         >
-          <span className="block text-center">Start Table</span>
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center text-[11px] font-semibold rounded-md border bg-white/10 border-white/40">
-            F
-          </span>
+          <span className="block text-center">Start Table <span className="text-xs opacity-75">(F)</span></span>
         </button>
 
         <SessionSummaryModal leaveSummary={leaveSummary} onClose={handleLeaveSummaryClose} />

@@ -85,14 +85,11 @@ const ActionControls: React.FC<ActionControlsProps> = ({ onAction, allowedAction
                   ${isPressed ? 'translate-y-[1px] scale-[0.99]' : ''}
                 `}
               >
-                <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold tracking-wide uppercase">{meta.label}</div>
+                    <div className="text-sm font-semibold tracking-wide uppercase">{meta.label} <span className="text-xs opacity-75">({meta.hotkey})</span></div>
                     <div className="text-xs opacity-80">{meta.desc}</div>
                   </div>
-                  <span className={`text-[11px] font-semibold px-2 py-1 rounded-md border ${isDisabled ? 'bg-gray-900/70 border-gray-700 text-gray-400' : 'bg-white/10 border-white/40 text-white'}`}>
-                    {meta.hotkey}
-                  </span>
                 </div>
               </button>
             );
@@ -123,12 +120,9 @@ const ActionControls: React.FC<ActionControlsProps> = ({ onAction, allowedAction
               >
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <div className="text-xs font-semibold tracking-wide uppercase">{meta.label}</div>
+                    <div className="text-xs font-semibold tracking-wide uppercase">{meta.label} <span className="text-[10px] opacity-75">({meta.hotkey})</span></div>
                     <div className="text-[11px] opacity-80 leading-tight">{meta.desc}</div>
                   </div>
-                  <span className={`text-[10px] font-semibold px-2 py-1 rounded-md border ${isDisabled ? 'bg-gray-900/70 border-gray-700 text-gray-400' : 'bg-white/10 border-white/40 text-white'}`}>
-                    {meta.hotkey}
-                  </span>
                 </div>
               </button>
             );
