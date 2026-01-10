@@ -53,6 +53,7 @@ export interface GameRules {
   simMinBet: 5 | 10 | 15 | 25 | 100;
   insuranceAllowed?: boolean;
   evenMoneyAllowed?: boolean;
+  simDecisionDelay?: number; // seconds; delay between player actions in simulation
 }
 
 // Stats Structure
@@ -78,12 +79,18 @@ export interface PlayerStats {
   simCurrentWinStreak?: number; // 当前连赢（Simulation）
   simMaxWinStreak?: number; // 最大连赢（Simulation）
   simAchievements?: string[]; // Simulation 成就列表
+  // Counting stats
+  countingTcAccuracy?: number | null; // TC 准确率 (0-1)
+  countingAvgEntryTime?: number | null; // 最近10轮平均输入时间（秒）
+  countingCurrentStreak?: number; // 当前连对（Counting）
+  countingBestStreak?: number; // 最佳连对（Counting）
 }
 
 export enum ViewMode {
   Rules = 'RULES',
   Strategy = 'STRATEGY',
   Practice = 'PRACTICE',
+  Counting = 'COUNTING',
   Simulation = 'SIMULATION',
   Stats = 'STATS',
   Scenario = 'SCENARIO', // Guided learning specific
@@ -98,3 +105,77 @@ export enum SimState {
   DealerTurn = 'DEALER_TURN',
   Resolving = 'RESOLVING',
 }
+
+// --- Counting Module Types ---
+
+export enum CountingState {
+  Setup = 'SETUP',
+  Playing = 'PLAYING',
+  Feedback = 'FEEDBACK',
+}
+
+export type CountingSystem = 'Hi-Lo';
+export type TimerStart = 'after-final-card' | 'from-round-start';
+export type InputFieldType = 'decksRemaining' | 'rcBefore' | 'deltaRC' | 'rcAfter' | 'trueCount';
+
+export type FieldMode = 'hidden' | 'input' | 'computed';
+
+export interface CountingSetupConfig {
+  numPlayers: number; // 1-5
+  autoPlayStrategy: 'basic'; // Future: 'aggressive' | 'conservative' | 'random'
+  decisionDelay: number; // 0, 1, 2, 3 (seconds)
+  countingSystem: CountingSystem; // 'Hi-Lo' only for now
+  showBreakdown: boolean;
+  fieldModes: Record<InputFieldType, FieldMode>;
+  timerStart: TimerStart;
+}
+
+export interface CountingSessionSnapshot {
+  deckCount: number;
+  dealerHitSoft17: boolean;
+  doubleAfterSplit: boolean;
+  surrender: 'none' | 'early' | 'late';
+  numPlayers: number;
+  decisionDelay: number;
+}
+
+export interface CountingPlayerHand {
+  cards: Card[];
+  isSplit: boolean; // If this is a split hand
+  splitIndex?: number; // e.g., Hand A = 0, Hand B = 1
+}
+
+export interface CountingRound {
+  roundNumber: number;
+  dealerHand: Card[];
+  playerHands: (CountingPlayerHand[] | null)[]; // null for empty positions
+  allCards: Card[]; // All cards revealed in this round
+}
+
+export interface CountingInputs {
+  decksRemaining?: number;
+  rcBefore?: number;
+  deltaRC?: number;
+  rcAfter?: number;
+  trueCount?: number;
+}
+
+export interface CountingFeedback {
+  isCorrect: boolean;
+  errors: {
+    field: InputFieldType;
+    userValue: number | undefined;
+    correctValue: number;
+    errorType: 'mapping' | 'delta-sum' | 'rc-update' | 'tc-conversion';
+  }[];
+  correctInputs: CountingInputs;
+}
+
+export interface CountingStats {
+  totalRounds: number;
+  correctRounds: number;
+  entryTimes: number[]; // Last N entry times (for averaging)
+  currentStreak: number;
+  bestStreak: number;
+}
+

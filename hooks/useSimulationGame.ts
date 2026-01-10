@@ -27,6 +27,7 @@ interface RoundResult {
 }
 
 export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
+  const decisionDelayMs = Math.max(0, Math.round((rules.simDecisionDelay ?? 0) * 1000));
   const [gameState, setGameState] = useState<SimState>(SimState.Setup);
   const [bankroll, setBankroll] = useState(100);
   const [initialBankroll, setInitialBankroll] = useState<number | null>(null);
@@ -37,6 +38,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
   const [insuranceBet, setInsuranceBet] = useState(0);
   const [insuranceOffered, setInsuranceOffered] = useState(false);
   const [evenMoneyTaken, setEvenMoneyTaken] = useState(false);
+  const [isPlayerWaiting, setIsPlayerWaiting] = useState(false);
 
   const [playerHands, setPlayerHands] = useState<Hand[]>([]);
   const [activeHandIndex, setActiveHandIndex] = useState(0);
@@ -53,6 +55,16 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
 
   const activeHand = playerHands[activeHandIndex];
   const canPlay = gameState === SimState.PlayerTurn;
+
+  const waitDecision = async (ms: number = decisionDelayMs) => {
+    if (ms <= 0) return;
+    setIsPlayerWaiting(true);
+    try {
+      await new Promise<void>((res) => setTimeout(res, ms));
+    } finally {
+      setIsPlayerWaiting(false);
+    }
+  };
 
   // 动态计算允许的操作（根据当前活动手牌）
   const getAllowedActions = (): Action[] => {
@@ -198,7 +210,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     setGameState(SimState.PlayerTurn);
   };
 
-  const handleAction = (action: Action) => {
+  const handleAction = async (action: Action) => {
     const currentHand = playerHands[activeHandIndex];
     let d = [...deck];
     let nextHand = false;
@@ -278,12 +290,16 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
       setPlayerHands(updatedHands);
 
       setDeck(d);
+      await waitDecision();
       return;
     }
 
     updatedHands[activeHandIndex] = newHand;
     setPlayerHands(updatedHands);
     setDeck(d);
+
+    // Apply per-action decision delay (players only)
+    await waitDecision();
 
     if (nextHand) {
       const allHandsDone = updatedHands.every((h) => h.isCompleted);
@@ -513,6 +529,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     setInsuranceBet(0);
     setInsuranceOffered(false);
     setEvenMoneyTaken(false);
+    setIsPlayerWaiting(false);
   };
 
   const restoreState = (savedState: any) => {
@@ -551,6 +568,7 @@ export const useSimulationGame = (rules: GameRules, allInThreshold: number) => {
     insuranceBet,
     insuranceOffered,
     evenMoneyTaken,
+    isPlayerWaiting,
     canPlay,
     activeHand,
     // Refs

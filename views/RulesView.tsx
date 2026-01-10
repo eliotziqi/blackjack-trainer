@@ -7,9 +7,10 @@ import RuleExplanation from '../components/ui/RuleExplanation';
 interface RulesViewProps {
   rules: GameRules;
   setRules: (rules: GameRules) => void;
+  isCountingInProgress?: boolean;
 }
 
-const RulesView: React.FC<RulesViewProps> = ({ rules, setRules }) => {
+const RulesView: React.FC<RulesViewProps> = ({ rules, setRules, isCountingInProgress = false }) => {
   // 默认规则常量
   const DEFAULT_RULES: GameRules = {
     deckCount: 6,
@@ -82,8 +83,16 @@ const RulesView: React.FC<RulesViewProps> = ({ rules, setRules }) => {
       </div>
       
       {/* Table Rules */}
-      <div className="bg-gray-800 p-6 rounded-lg space-y-4 shadow-lg border border-gray-700">
-        <h3 className="text-lg font-bold mb-4">Table Rules</h3>
+      <div className={`bg-gray-800 rounded-lg shadow-lg border p-6 space-y-4 ${isCountingInProgress ? 'border-amber-500 bg-amber-900/10 opacity-80' : 'border-gray-700'}`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold">Table Rules</h3>
+          {isCountingInProgress && (
+            <div className="flex items-center gap-2 text-xs text-amber-900 bg-amber-300 px-2 py-1 rounded font-semibold">
+              <span role="img" aria-label="lock">🔒</span>
+              <span>Counting in progress, end session to change</span>
+            </div>
+          )}
+        </div>
         <RuleItemWithInfo
           label="Dealer Hits Soft 17"
           description="When dealer shows A+6, whether dealer must hit (H17) or stand (S17)"
@@ -100,6 +109,7 @@ This rule affects the dealer's final hand and your optimal strategy decisions.`
           <RuleToggle
             value={rules.dealerHitSoft17}
             onChange={(v) => setRules({...rules, dealerHitSoft17: v})}
+            disabled={isCountingInProgress}
           />
         </RuleItemWithInfo>
 
@@ -119,6 +129,7 @@ This rule is generally favorable to the player and affects strategic decisions a
           <RuleToggle
             value={rules.doubleAfterSplit}
             onChange={(v) => setRules({...rules, doubleAfterSplit: v})}
+            disabled={isCountingInProgress}
           />
         </RuleItemWithInfo>
 
@@ -142,6 +153,7 @@ Surrender is most useful when you have a weak hand against a strong dealer card.
             className="bg-gray-700 text-white rounded p-2"
             value={rules.surrender}
             onChange={(e) => setRules({...rules, surrender: e.target.value})}
+            disabled={isCountingInProgress}
           >
             <option value="none">None</option>
             <option value="late">Late</option>
@@ -171,6 +183,7 @@ More decks mean the house has a greater advantage. The basic strategy may need s
             className="bg-gray-700 text-white rounded p-2"
             value={rules.deckCount}
             onChange={(e) => setRules({...rules, deckCount: parseInt(e.target.value)})}
+            disabled={true}
           >
             <option value={1}>1 Deck</option>
             <option value={2}>2 Decks</option>

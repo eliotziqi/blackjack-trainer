@@ -1,4 +1,5 @@
 import { PlayerStats, StatEntry } from "../types";
+import { loadCountingStats, getTcAccuracy, getAvgEntryTime, clearCountingStats } from './countingService';
 
 const STATS_KEY = 'bj_trainer_stats';
 
@@ -20,9 +21,14 @@ const initialStats: PlayerStats = {
 export const loadStats = (): PlayerStats => {
   try {
     const data = localStorage.getItem(STATS_KEY);
-    if (!data) return initialStats;
+    if (!data) return getInitialStatsWithCounting();
     
     const parsed = JSON.parse(data);
+    
+    // Load counting stats separately
+    const countingStats = loadCountingStats();
+    const tcAccuracy = getTcAccuracy(countingStats);
+    const avgEntryTime = getAvgEntryTime(countingStats);
     
     // 数据迁移：确保新字段存在
     return {
@@ -38,10 +44,29 @@ export const loadStats = (): PlayerStats => {
       simCurrentWinStreak: parsed.simCurrentWinStreak ?? 0,
       simMaxWinStreak: parsed.simMaxWinStreak ?? 0,
       simAchievements: parsed.simAchievements || [],
+      // Counting stats
+      countingTcAccuracy: tcAccuracy,
+      countingAvgEntryTime: avgEntryTime,
+      countingCurrentStreak: countingStats.currentStreak,
+      countingBestStreak: countingStats.bestStreak,
     };
   } catch (e) {
-    return initialStats;
+    return getInitialStatsWithCounting();
   }
+};
+
+const getInitialStatsWithCounting = (): PlayerStats => {
+  const countingStats = loadCountingStats();
+  const tcAccuracy = getTcAccuracy(countingStats);
+  const avgEntryTime = getAvgEntryTime(countingStats);
+  
+  return {
+    ...initialStats,
+    countingTcAccuracy: tcAccuracy,
+    countingAvgEntryTime: avgEntryTime,
+    countingCurrentStreak: countingStats.currentStreak,
+    countingBestStreak: countingStats.bestStreak,
+  };
 };
 
 export const saveStats = (stats: PlayerStats) => {
@@ -85,8 +110,9 @@ export const recordPracticeResult = (
 };
 
 export const clearStats = () => {
-    localStorage.removeItem(STATS_KEY);
-    return initialStats;
+  localStorage.removeItem(STATS_KEY);
+  clearCountingStats();
+  return initialStats;
 }
 
 // 更新 Simulation 最大乘数（仅在 leave table 时调用）

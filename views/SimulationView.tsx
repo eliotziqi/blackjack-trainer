@@ -209,6 +209,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
 
       const allowed = game.getAllowedActions();
       if (!allowed.includes(action)) return;
+      if (game.isPlayerWaiting) return;
 
       e.preventDefault();
       setPressedAction(action);
@@ -436,7 +437,15 @@ const SimulationView: React.FC<SimulationViewProps> = ({ globalRules }) => {
               onAction={game.handleAction}
               allowedActions={game.getAllowedActions()}
               pressedAction={pressedAction}
+              disabled={game.isPlayerWaiting}
             />
+          </div>
+        )}
+
+        {game.gameState === SimState.PlayerTurn && game.isPlayerWaiting && (
+          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-200">
+            <div className="w-4 h-4 border-2 border-gray-500 border-t-white rounded-full animate-spin" />
+            <span>Thinking...</span>
           </div>
         )}
 

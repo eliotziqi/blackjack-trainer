@@ -63,7 +63,16 @@ const StatsView: React.FC<StatsViewProps> = ({ stats, onReset }) => {
   };
 
   const handleReset = () => {
+    // Clear all stats
     clearStats();
+    
+    // Clear Counting session state
+    localStorage.removeItem('bj_counting_session_v1');
+    
+    // Clear Simulation session state
+    localStorage.removeItem('bj_sim_state_v1');
+    
+    // Trigger parent reset callback
     onReset();
   };
 
@@ -106,19 +115,16 @@ const StatsView: React.FC<StatsViewProps> = ({ stats, onReset }) => {
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-        <h3 className="text-lg font-bold mb-4">Practice Streaks</h3>
-        <div className="grid grid-cols-2 gap-6">
+        <div className="mt-6 pt-4 border-t border-gray-700 grid grid-cols-2 gap-6">
           <div>
-            <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Current</div>
+            <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Current Streak</div>
             <div className={`text-3xl font-mono font-bold ${getColorByStreak(stats.streak)}`}>
               {stats.streak}
             </div>
           </div>
           <div>
-            <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Personal Best</div>
+            <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Best Streak</div>
             <div className={`text-3xl font-mono font-bold ${getColorByStreak(stats.maxStreak)}`}>
               {stats.maxStreak}
             </div>
@@ -139,7 +145,49 @@ const StatsView: React.FC<StatsViewProps> = ({ stats, onReset }) => {
       </div>
 
       <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-        <h3 className="text-lg font-bold mb-4">Simulation</h3>
+        <h3 className="text-lg font-bold mb-4">Counting Performance</h3>
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">TC Accuracy</div>
+            <div className={`text-3xl font-mono font-bold ${getColorByPercent(
+              stats.countingTcAccuracy !== null && stats.countingTcAccuracy !== undefined 
+                ? Math.round(stats.countingTcAccuracy * 100) 
+                : -1
+            )}`}>
+              {stats.countingTcAccuracy !== null && stats.countingTcAccuracy !== undefined
+                ? `${Math.round(stats.countingTcAccuracy * 100)}%`
+                : 'N/A'}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Avg Entry Time (Last 10)</div>
+            <div className={`text-3xl font-mono font-bold ${
+              stats.countingAvgEntryTime !== null && stats.countingAvgEntryTime !== undefined
+                ? 'text-blue-400'
+                : 'text-gray-400'
+            }`}>
+              {stats.countingAvgEntryTime !== null && stats.countingAvgEntryTime !== undefined
+                ? `${stats.countingAvgEntryTime.toFixed(1)}s`
+                : 'N/A'}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Current Streak</div>
+            <div className={`text-3xl font-mono font-bold ${getColorByStreak(stats.countingCurrentStreak ?? 0)}`}>
+              {stats.countingCurrentStreak ?? 0}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Best Streak</div>
+            <div className={`text-3xl font-mono font-bold ${getColorByStreak(stats.countingBestStreak ?? 0)}`}>
+              {stats.countingBestStreak ?? 0}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+        <h3 className="text-lg font-bold mb-4">Simulation Performance</h3>
         <div className="grid grid-cols-2 gap-6">
           <div>
             <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Max Multiplier</div>

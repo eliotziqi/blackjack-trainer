@@ -25,14 +25,22 @@
 - 即时反馈：正确/错误及详细解释
 - 统计正确率和响应时间
 
-### 5. 连续模拟 (Simulation)
+### 5. 算牌训练 (Counting)
+- Hi-Lo 计数系统训练
+- 可配置玩家数量和动作延迟
+- 训练 Running Count (RC) 和 True Count (TC) 计算
+- 实时计时和准确率统计
+- 支持自定义输入字段要求
+
+### 6. 连续模拟 (Simulation)
 - 完整的 Blackjack 游戏流程模拟
 - 资金管理与波动追踪
 - 测试策略在连续场景下的稳定性
 
-### 6. 数据统计 (Stats)
+### 7. 数据统计 (Stats)
 - 按手牌类型统计正确率
 - 记录错误决策模式
+- Counting 训练统计（TC 准确率、平均输入时间、连对记录）
 - 帮助定位薄弱点
 
 ## 🚀 快速开始
@@ -83,13 +91,21 @@ blackjack-trainer/
 │   ├── StrategyView.tsx         # 策略表格页面
 │   ├── PracticeView.tsx         # 练习模式页面
 │   ├── ScenarioView.tsx         # 场景分析页面
+│   ├── CountingView.tsx         # 牌计数训练页面
 │   ├── SimulationView.tsx       # 游戏模拟页面
 │   └── StatsView.tsx            # 统计数据页面
+│
+├── hooks/                   # React Hooks
+│   ├── useCountingSession.ts    # 牌计数会话管理
+│   ├── useHintSystem.ts         # 提示系统
+│   ├── useSimulationGame.ts     # 游戏模拟逻辑
+│   └── useSimulationPersistence.ts # 模拟持久化
 │
 ├── services/                # 业务逻辑
 │   ├── blackjackLogic.ts        # 游戏核心逻辑
 │   ├── strategyEngine.ts        # 基本策略引擎
 │   ├── evCalculator.ts          # 期望值计算器
+│   ├── countingService.ts       # 牌计数服务
 │   └── statsService.ts          # 统计数据管理
 │
 ├── App.tsx                  # 主应用（路由 + 布局）

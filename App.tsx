@@ -3,7 +3,7 @@ import { ViewMode, GameRules } from './types';
 import { loadStats, clearStats } from './services/statsService';
 
 // Import icons
-import { SettingsIcon, ChartIcon, LightningIcon, ChipIcon, BookOpenIcon } from './components/icons';
+import { SettingsIcon, ChartIcon, LightningIcon, CountingIcon, ChipIcon, BookOpenIcon } from './components/icons';
 
 // Import UI components
 import NavButton from './components/ui/NavButton';
@@ -13,6 +13,7 @@ import RulesView from './views/RulesView';
 import StrategyView from './views/StrategyView';
 import PracticeView from './views/PracticeView';
 import ScenarioView from './views/ScenarioView';
+import CountingView from './views/CountingView';
 import SimulationView from './views/SimulationView';
 import StatsView from './views/StatsView';
 
@@ -24,6 +25,7 @@ const DEFAULT_RULES: GameRules = {
   surrender: 'late',
   blackjackPayout: 1.5,
   simMinBet: 10,
+  simDecisionDelay: 0,
 };
 
 // --- App Component ---
@@ -42,6 +44,7 @@ const App: React.FC = () => {
     return DEFAULT_RULES;
   });
   const [stats, setStats] = useState(loadStats());
+  const [isCountingInProgress, setIsCountingInProgress] = useState(false);
   
   // Save rules to localStorage whenever they change
   useEffect(() => {
@@ -67,13 +70,14 @@ const App: React.FC = () => {
         return;
       }
 
-      // 1=Rules, 2=Strategy, 3=Practice, 4=Sim, 5=Stats
+      // 1=Rules, 2=Strategy, 3=Practice, 4=Counting, 5=Sim, 6=Stats
       const keyToView: { [key: string]: ViewMode } = {
         '1': ViewMode.Rules,
         '2': ViewMode.Strategy,
         '3': ViewMode.Practice,
-        '4': ViewMode.Simulation,
-        '5': ViewMode.Stats,
+        '4': ViewMode.Counting,
+        '5': ViewMode.Simulation,
+        '6': ViewMode.Stats,
       };
 
       if (keyToView[e.key]) {
@@ -102,7 +106,11 @@ const App: React.FC = () => {
       {/* Main Content Area */}
       <main className="flex-grow p-4 pb-24 max-w-5xl mx-auto w-full">
         {view === ViewMode.Rules && (
-          <RulesView rules={rules} setRules={setRules} />
+          <RulesView 
+            rules={rules} 
+            setRules={setRules}
+            isCountingInProgress={isCountingInProgress}
+          />
         )}
         {view === ViewMode.Strategy && (
           <StrategyView rules={rules} navigate={navigate} />
@@ -112,6 +120,12 @@ const App: React.FC = () => {
         )}
         {view === ViewMode.Scenario && (
           <ScenarioView globalRules={rules} navigate={navigate} />
+        )}
+        {view === ViewMode.Counting && (
+          <CountingView 
+            globalRules={rules}
+            onCountingStateChange={setIsCountingInProgress}
+          />
         )}
         {view === ViewMode.Simulation && (
           <SimulationView globalRules={rules} />
@@ -131,8 +145,9 @@ const App: React.FC = () => {
           <NavButton icon={<SettingsIcon/>} label="Rules" active={view === ViewMode.Rules} onClick={() => navigate(ViewMode.Rules)} shortcut="1" />
           <NavButton icon={<ChartIcon/>} label="Strategy" active={view === ViewMode.Strategy} onClick={() => navigate(ViewMode.Strategy)} shortcut="2" />
           <NavButton icon={<LightningIcon/>} label="Practice" active={view === ViewMode.Practice} onClick={() => navigate(ViewMode.Practice)} shortcut="3" />
-          <NavButton icon={<ChipIcon/>} label="Sim" active={view === ViewMode.Simulation} onClick={() => navigate(ViewMode.Simulation)} shortcut="4" />
-          <NavButton icon={<BookOpenIcon/>} label="Stats" active={view === ViewMode.Stats} onClick={() => navigate(ViewMode.Stats)} shortcut="5" />
+          <NavButton icon={<CountingIcon/>} label="Counting" active={view === ViewMode.Counting} onClick={() => navigate(ViewMode.Counting)} shortcut="4" />
+          <NavButton icon={<ChipIcon/>} label="Sim" active={view === ViewMode.Simulation} onClick={() => navigate(ViewMode.Simulation)} shortcut="5" />
+          <NavButton icon={<BookOpenIcon/>} label="Stats" active={view === ViewMode.Stats} onClick={() => navigate(ViewMode.Stats)} shortcut="6" />
         </div>
       </nav>
     </div>
