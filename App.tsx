@@ -94,7 +94,13 @@ const App: React.FC = () => {
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 p-4 sticky top-0 z-[60]">
         <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold text-green-400 tracking-wider">BLACKJACK TRAINER</h1>
+          <h1
+            className="text-xl font-bold text-green-400 tracking-wider group"
+            title="Your Best Journey to Advantage Play"
+          >
+            <span className="group-hover:hidden">BJAP: Blackjack Advantage Player</span>
+            <span className="hidden group-hover:inline">Your Best Journey to Advantage Play</span>
+          </h1>
           <div className="flex space-x-2">
             <div className="text-xs text-gray-400 bg-gray-900 px-2 py-1 rounded border border-gray-700">
               {rules.dealerHitSoft17 ? 'H17' : 'S17'} • {rules.doubleAfterSplit ? 'DAS' : 'No DAS'} • {rules.surrender === 'none' ? 'None' : (rules.surrender === 'late' ? 'Late' : 'Early')} • {rules.deckCount}D

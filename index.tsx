@@ -4,7 +4,7 @@ import App from './App';
 
 // Set document metadata (title + favicon)
 const faviconHref = new URL('./components/icons/dealer.svg', import.meta.url).href;
-document.title = 'BJ Trainer';
+document.title = 'BJAP';
 const existingFavicon = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
 const favicon = existingFavicon ?? Object.assign(document.createElement('link'), { rel: 'icon' });
 favicon.href = faviconHref;
