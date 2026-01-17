@@ -1,47 +1,248 @@
-# Blackjack Trainer
+# BJAP
 
 一个专注于 21 点基本策略训练的 Web 应用，帮助用户通过系统化练习掌握最优决策。
 
-**🌐 在线体验**: [https://eliotziqi.github.io/blackjack-trainer/](https://eliotziqi.github.io/blackjack-trainer/)
+**🌐 在线体验**: [https://eliotziqi.github.io/bjap/](https://eliotziqi.github.io/bjap/)
 
 ## ✨ 核心功能
 
-### 1. 规则配置 (Rules)
-- 支持自定义牌桌规则：牌副数、Dealer Hit S17、DAS、Surrender 等
-- 规则快照机制：确保单次训练会话规则一致性
+### 1. 规则配置 (Rules) [x] [ ] phase3
+- [x] 支持自定义牌桌规则：牌副数、Dealer Hit S17、DAS、Surrender 等
+- [x] 规则快照机制：根据规则设定更新到右上角快找，确保训练等功能中规则一致性
+- [ ] 在 Rules 页面新增 Observe Rules 卡片：
+    - 包含类似 Simulation Rules 的规则设置
+        - Blackjack Payout: 3:2
+        - Min Bet: 25
+        - Max Bet: 3000
+        - Insurance: 2:1
+        - Even Money: Yes
+        - Penetration: 75%
+    - 为 Advantage 玩家配置默认下一局下注乘数
+        - 默认固定注：每手 1u （u = min bet）
+        - 默认变注（随 True Count 的 bet ramp）作为下拉菜单：
+            - TC ≤ 0：1u
+            - TC = 1：2u
+            - TC = 2：4u
+            - TC = 3：6u
+            - TC = 4：8u
+            - TC = 5：10u
+            - TC = 6：12u
+            - TC = 7：12u
+            - TC = 8：12u
+            - TC = 9：12u
+            - TC ≥ 10：12u
+- [ ] phase3 在Observe Rules 卡片末尾显示 House/Player Edge 数值、破产概率
+  - [ ] phase3 根据当前规则配置实时计算 House Edge 或 Player Edge
+  - [ ] phase3 根据当前规则配置实时计算 破产概率
 
-### 2. 策略记忆 (Strategy)
-- 可视化基本策略表格（Hard、Soft、Pairs）
-- 悬停显示策略解释
-- 支持不同规则下策略自动适配
+### 2. 策略记忆 (Strategy) [x] [ ] phase1
+- [x] 可视化基本策略表格（Hard、Soft、Pairs）
+- [x] 悬停显示策略解释
+- [x] 支持不同规则下策略自动适配
+- [ ] phase1 TC-aware 策略增强 + UI 优化：
+  - [ ] phase1 **UI 改进**：页面顶部分页toggle，支持 Hard/Soft/Pairs 三表分页展示（移动端友好）
+  - [ ] phase1 **TC 输入**：分页toggle下添加 TC 范围输入字段（-10 ~ +10，精准到整数）+ Quick Reset 按钮 + 加减 1 按钮（移动端友好）
+  - [ ] phase1 **页面同步**：TC 值与 Scenario 页面双向同步，任一页改变自动更新另一页
+  - [ ] phase1 **动态表格内容**：根据当前 TC 值实时计算每个格子的调整后 EV
+  - [ ] phase1 **格子显示模式**（可切换）：
+    - **模式A（前二对比）**：对角线分割格子，上下分别显示 EV 排名前二的最佳操作
+      - 用途：快速对比不同规则下的决策差异（Surrender/hit/double 可用/不可用）
+    - **模式B（TC 对比）**：对角线分割格子，上下分别显示「当前 TC 最佳」vs「默认最佳」
+      - 用途：直观学习 TC 如何改变最优决策
 
-### 3. 场景理解 (Scenario)
-- 随机生成训练场景
-- 实时显示所有可选动作的期望值（EV）
-- AI 生成的策略解释（纯本地算法，无需 API）
+### 3. 场景理解 (Scenario) [x] [ ] phase1
+- [x] 随机生成手牌场景（Player 手牌 + Dealer 明牌）
+- [x] 实时显示所有可选动作的期望值（EV）
+- [x] AI 生成的策略解释（纯本地算法，无需 API）
+- [ ] phase1 TC-aware 场景分析增强：
+  - [ ] phase1 **TC 输入同步**：页面顶部 TC 范围输入字段（-10 ~ +10，精度 0.5）+ Quick Reset，与 Strategy 页面同步
+  - [ ] phase1 **动态 EV 计算**：根据当前 TC 值实时计算所有可选动作的调整后 EV，并按从优到劣排序
+  - [ ] phase1 **Optimal Action 更新**：根据 TC 条件下 EV 排序动态显示最佳操作
+  - [ ] phase1 **策略解释**：包含 TC 对决策的影响分析
+    - 展示基础策略最佳 vs TC-aware 最佳的差异（如适用时）
+    - 解释当前 TC 值如何影响该决策
+  - [ ] phase1 **智能返回按钮**：Back 按钮根据来源页面智能返回
+    - 从 Strategy 页面来：返回 Strategy
+    - 从 Stats-Weakness 页面来：返回对应的 Weakness 页面（Hard/Soft/Pairs）
 
-### 4. 无提示练习 (Practice)
-- 模拟真实决策场景
-- 即时反馈：正确/错误及详细解释
-- 统计正确率和响应时间
+### 4. 无提示练习 (Practice) [x] [ ] phase1
+- [x] 模拟真实决策场景
+- [x] 即时反馈：正确/错误及详细解释
+- [x] 统计正确率和响应时间
+- [ ] phase1 **TC-aware 练习模式**（页面内开关控制）：
+  - [ ] phase1 **计数数据显示**：每次练习开始时独立随机生成并显示，不跨多个练习追踪
+    - Decks Remaining（精确到 0.5，合理范围）
+    - RC Before（精确到整数，合理范围）
+    - ΔRC（根据当前手牌计算）
+    - RC After（RC Before + ΔRC）
+    - True Count（计算精确到 0.5）
+  - [ ] phase1 **结算页面 TC 信息**：
+    - 展示基础策略 vs TC-aware 的所有可用操作（按 EV 排序）的 EV 差异对比，类似 Scenario 页面**动态 EV 计算**的实现
+    - 解释当前 TC 值如何影响该决策，类似 Scenario 页面**策略解释**的实现
+- [ ] phase1 **结算反馈系统升级**：
+  - [ ] phase1 **快速模式开关**（页面内控制）：
+    - **快速模式**：结算页面停留固定时间后自动继续（当前行为）
+    - **非快速模式**：结算页面保持显示，提供"下一个练习"手动触发按钮
+  - [ ] phase1 提高结算页面背景透明度（方便查看底层牌面）
+- [ ] phase1 按 TC 范围分类的正确率统计
 
-### 5. 算牌训练 (Counting)
-- Hi-Lo 计数系统训练
-- 可配置玩家数量和动作延迟
-- 训练 Running Count (RC) 和 True Count (TC) 计算
-- 实时计时和准确率统计
-- 支持自定义输入字段要求
+### 5. 算牌训练 (Counting) [x] [ ] phase1
+- [x] Hi-Lo 计数系统训练
+- [x] 可配置玩家数量和动作延迟
+- [x] 训练 Running Count (RC) 和 True Count (TC) 计算
+- [x] 实时计时和准确率统计
+- [x] 支持自定义输入字段要求
+- [ ] phase1 自动决策的 TC-aware 执行（Auto-play Strategy在当前Basic (fixed)的唯一选项外添加Advantage Counter选项，按照 TC-adjusted 策略自动决策）
+- [ ] phase1 TC 对决策影响的问答：
+  - [ ] phase1 在当前的“Enter Your Count”卡片之后添加判断题卡片
+    - [ ] phase1 内容为每个玩家的操作是否受 TC 影响，根据玩家数量设置（例如设置为 2 玩家，询问 Player#1 和 Player#2 的操作是否受 TC 影响）
+  - [ ] phase1 区分两种策略情景统计正确率：
+    - **Basic Strategy 情景**：玩家使用基本策略，问题问该操作是否受 TC 影响
+    - **Advantage Counter 情景**：玩家使用 TC-aware 策略，问题问该玩家的所有操作（一局中除了第一次操作外后续可能有多次操作，每次都要计算，任意一次操作因为TC影响而导致与基础策略对应操作不同，就应该算作应根据 TC 调整）是否受 TC 影响
+  - [ ] phase1 独立统计两种策略下的答题正确率（例如 Player#1 在 Basic模式 情景正确 → Basic模式 总题数+1 正确题数+1；Player#3 在 Advantage 模式错误，Advantage模式 总题数+1 正确题数+0）
+  - [ ] phase1 在 Stats 页面 Counting Performance 卡片中展示两种策略的正确率对比
 
-### 6. 连续模拟 (Simulation)
-- 完整的 Blackjack 游戏流程模拟
-- 资金管理与波动追踪
-- 测试策略在连续场景下的稳定性
+### 6. 连续模拟 (Simulation) [x] [ ] phase1
+- [x] 完整的 Blackjack 游戏流程模拟
+- [x] 资金管理与波动追踪
+- [x] 测试策略在连续场景下的稳定性
+- [x] Hint 系统：显示所有允许动作的 EV 排序
+- [ ] phase1 **Simulation 判断统计**：
+  - [ ] phase1 玩家可选设置：是否启用 TC-aware 模式
+  - [ ] phase1 区分初始判断 vs 后续等价判断（如 Hit 后再次决策、Split 后的多次决策）
+    - 统计逻辑：初始判断和后续判断算法不同，但结果需累加（不在 Stats 页面单独展示分类的统计量）
+    - 等价转换：后续判断转换为等价的起始两张牌情况进行统计
+  - [ ] phase1 模拟结果统计增强：
+    - 按 TC-aware 开启/关闭分开统计
+    - 收集 Weakness 策略表数据（理性判断率 + TC 范围正确率）
+    - Simulation Performance 卡片升级：
+      - 卡片可点击，点击后卡片翻转效果
+      - 正面显示非 TC-aware 模式统计数据（总正确率）
+      - 背面显示 TC-aware 模式统计数据（总正确率）
+      - 结构参考：Practice Performance 卡片交互
+- [ ] phase1 **Hint 系统 TC-aware 升级**：
+  - [ ] phase1 简化 Hint 交互：点击 Hint 按钮，根据当前 Dealer upcard 及玩家手牌逻辑等价计算，跳转到对应 Scenario 页面
+  - [ ] phase1 Scenario 页面的 Return 按钮在此场景下只能返回到 Simulation（智能返回逻辑）
 
-### 7. 数据统计 (Stats)
-- 按手牌类型统计正确率
-- 记录错误决策模式
-- Counting 训练统计（TC 准确率、平均输入时间、连对记录）
-- 帮助定位薄弱点
+### 7. 观战模式 (Observe) [ ] phase2
+- [ ] phase2 完整的自动游戏流程（所有玩家 + Dealer 均自动决策）
+- [ ] phase2 机制参考Rules页面Observe Rules卡片的规则设置
+    - 包括 Blackjack Payout, Min/Max Bet, Insurance, Even Money 等 
+- [ ] phase2 **游戏桌布局**：
+  - [ ] phase2 7 个座位位置，初始为虚化圆圈表示空座
+  - [ ] phase2 点击空座可加入玩家（显示头像），点击头像可移除玩家（恢复空座）
+  - [ ] phase2 卡牌发放：按真实牌局顺序发牌
+    - 初始发牌：Player#1, Player#2, ..., Dealer (face up), Player#1, Player#2, ..., Dealer (face down)
+    - 后续决策后发牌按实际情况发
+  - [ ] phase2 **发牌延迟**：固定每张牌 0.5s
+  - [ ] phase2 **决策延迟控制**：
+    - 页面内条形空间可左右拖动调整
+    - 五档可选：0.5s / 1s / 2s / 3s / 5s
+    - 每个玩家决策阶段使用该延迟时间
+- [ ] phase2 **计数数据实时追踪**（页面底部跨多个牌局）：
+  - [ ] phase2 初次进入页面无玩家，视为满 deck、RC=0 的初始状态
+  - [ ] phase2 页面内切换到其他功能页不刷新计数数据
+  - [ ] phase2 离开 Observe 页面时保存当前牌桌状态并自动暂停
+  - [ ] phase2 提供单独的暂停按钮（便于停下来思考）
+  - [ ] phase2 实时显示当前数据：
+    - Decks Remaining（随牌局变化）
+    - RC Before（每局开始值）
+    - ΔRC（当前手牌计算）
+    - RC After（RC Before + ΔRC）
+    - True Count（精确到 0.5）
+  - [ ] phase2 **刷新机制**：当 Decks Remaining = 0 时，重置为：
+    - Decks Remaining = Rules 设置的初始卡组数
+    - RC Before = 0
+- [ ] phase2 **玩家加入与管理**：
+  - [ ] phase2 点击空座弹出玩家设置对话框（跳过当前进行中的牌局）
+    - 输入初始筹码
+    - 输入默认下注金额
+    - 选择玩家策略模式：Basic / Advantage（TC-aware）
+    - 确认按键后在下一个牌局开始时参与
+  - [ ] phase2 只有有“准备就绪”的玩家时才开始新一局
+  - [ ] phase2 头像颜色区分玩家状态：
+    - 灰色：未完成设置 / 未加入
+    - 偏绿：Advantage 玩家
+    - 偏红：Basic 玩家
+  - [ ] phase2 每个玩家头像右侧显示实时信息：
+    - **总资金**（可编辑，修改后变化值清零）
+    - **本局下注**（当前牌局的下注额，样式区别于下一局）
+    - **下一局下注**（可编辑，仅影响后续牌局，样式区别）
+    - **变化值**（绿色 = 盈利，红色 = 亏损，修改总资金时清零）
+    - **Player Edge**（Advantage 玩家显示，实时根据当前规则和计数数据计算）
+    - **破产概率**（Advantage 玩家显示，实时根据当前规则和计数数据计算）
+    - 总资金改变后，本局结束时作为第一次变化更新
+    - Advantage 玩家下注稍有区别：
+      - **下一局下注** 选项显示为固定注金额，并多一个 bet ramp 按钮，点击显示该玩家的当前 bet ramp 设定，可以单独修改单个advantage玩家的bet ramp，但较低Tc的下注金额倍数不可高于较高Tc的下注金额倍数（固定注乘数为1， bet ramp：TC≤0，TC=1，TC=2， ... TC=9， TC>=10），若不设置，按照rules页面默认bet ramp 自动设置
+
+  - [ ] phase2 牌局进行中点击头像：下局下注改为 0，dealer不给该玩家发牌；再次点击则变为灰色头像，表示下一局开始时离开
+  - [ ] phase2 资金不足时按真实规则限制操作：
+    - 资金不足以覆盖 split / double 时禁止对应操作
+    - 总资金小于下一局下注时，下局自动 all-in，但不修改下一局下注金额
+    - 输光后停止并离开，座位变为空座，其他玩家顺序不变（可出现 1/2/5 号有玩家、3/4 号空座）
+- [ ] phase2 **底部决策思路框**（Dealer 卡、玩家决策区、计数数据下方）：
+  - [ ] phase2 实时显示当前玩家的决策过程（数据示例）：
+    - "Player#2 Hand: 10,6 (hard 16) vs Dealer 7"
+    - "Basic Strategy 建议：Hit（EV: +0.25）"
+    - "当前 TC：+5，TC-aware 建议：Stand（EV: +0.38）"
+- [ ] phase2 **统计与反馈**：
+  - [ ] phase2 分别追踪 Basic / Advantage 两类玩家的统计：
+    - 总手数（同类玩家同局多人则按人数累加）
+    - Multiplier（总盈利 / 总下注金额，游戏过程中持续更新）
+  - [ ] phase2 在 Stats 页面 Observe Performance 卡片中展示成绩对比
+
+### 8. 数据统计 (Stats) [x] [ ] phase1 [ ] phase2
+- [x] 按手牌类型统计正确率
+- [x] 记录错误决策模式
+- [x] Counting 训练统计（TC 准确率、平均输入时间、连对记录）
+- [x] 帮助定位薄弱点
+- [ ] phase1 **Stats 页面结构升级**：
+  - [ ] phase1 **顶部分页 Toggle**：General / Hard / Soft / Pairs 四个页面
+    - **General 页面**：当前 Stats 页面内容（整体统计概览）
+    - **Hard/Soft/Pairs 页面**：Weakness 控件（详细弱点分析）
+- [ ] phase1 **Weakness 策略表**（Hard/Soft/Pairs 三个分页）：
+  - [ ] phase1 **表格布局**：类似 Strategy 策略表，但简化为统计用途
+  - [ ] phase1 **格子内容**：显示每个组合的理性判断率
+    - 数据来源：Practice + Simulation 模式累计
+    - Simulation 区分：初始判断 vs 后续等价判断（如 Hit 后再次决策、Split 后的多次决策）
+        - 统计逻辑：初始判断和后续判断算法不同，但结果需累加（不在Stats页面单独展示分类的统计量）
+        - 等价转换：后续判断转换为等价的起始两张牌情况进行统计
+    - 统计逻辑：同一组合的多次决策累加（如 Sim 中 Hard 14 vs Dealer A 出现 10 次 + Practice 2 次 = 12 次统计）
+  - [ ] phase1 **颜色编码**：
+    - 灰色：No Data
+    - 红色：Weak（低正确率）
+    - 黄色：OK（中等正确率）
+    - 绿色：Great（高正确率）
+  - [ ] phase1 **交互功能**：点击格子跳转对应 Scenario 页面（预设相同手牌组合），方便针对性复习，其Return按钮智能返回 Stats-Weakness 对应页面
+- [ ] phase1 **TC 范围分布统计**（Hard/Soft/Pairs 分页顶部）：
+  - [ ] phase1 **TC 范围划分**：-10 ~ +10，共 21 个格子
+    - 第一行：TC = 0（非 TC-aware）+ TC 最接近 0（TC-aware）
+    - 第二行：TC 最接近 +1 ~ +10（共 10 个）
+    - 第三行：TC 最接近 -1 ~ -10（共 10 个）
+  - [ ] phase1 **布局**：按上述分组排列（2 + 10 + 10）
+  - [ ] phase1 **每格显示**：对应 TC 范围内该手牌类型（Hard/Soft/Pairs）的正确率
+    - 示例：Hard 页面中 TC=0 格子显示所有 Hard 手牌在不考虑 TC 时的正确率；TC 最接近 0 格子显示在 TC 最接近 0 时的正确率
+- [ ] phase1 **Practice 统计增强**：
+  - [ ] phase1 按 TC-aware 开启/关闭分开统计
+  - [ ] phase1 Practice Performance 卡片交互升级：
+    - 卡片可点击，点击后卡片翻转效果
+    - 正面显示非 TC-aware 模式统计数据
+    - 背面显示 TC-aware 模式统计数据
+  - [ ] phase1 收集 Weakness 策略表数据（理性判断率 + TC 范围正确率）
+- [ ] phase1 **Counting 统计增强**：
+  - [ ] phase1 Counting Performance 卡片添加两种策略的正确率
+- [ ] phase1 **Simulation 统计增强**：
+  - [ ] phase1 收集 Weakness 策略表数据（理性判断率 + TC 范围正确率）
+    - 统计逻辑：初始判断和后续判断算法不同，但结果需累加（不单独展示分类统计）
+    - 等价转换：后续判断转换为等价的起始两张牌情况进行统计
+  - [ ] phase1 **Simulation Performance 卡片升级**：
+    - 卡片可点击，点击后卡片翻转效果
+    - 正面显示非 TC-aware 模式统计数据（Hard/Soft/Pairs 总正确率）
+    - 背面显示 TC-aware 模式统计数据（Hard/Soft/Pairs 总正确率）
+    - 结构参考：Practice Performance 卡片交互
+- [ ] phase2 Observe 模式统计（Basic / Advantage 两类玩家的成绩对比）
+    - 总手数（同类玩家同局多人则按人数累加）
+    - Multiplier（总盈利 / 总下注金额，游戏过程中持续更新）
 
 ## 🚀 快速开始
 
@@ -71,7 +272,7 @@ npm run deploy
 ### 项目结构
 
 ```
-blackjack-trainer/
+bjap/
 ├── TODO.md                  # 主 TODO 列表
 ├── components/              # React 组件
 │   ├── ActionControls.tsx       # 动作按钮组件
